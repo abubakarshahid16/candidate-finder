@@ -22,13 +22,6 @@ class CandidateSearchRequest(BaseModel):
     publicProfileUrls: list[str] = []
 
 
-DEMO_CANDIDATES = [
-    {"id": "demo-aurora-1", "name": "Demo Candidate Aurora", "title": "Data Engineer", "industry": "Technology", "skills": ["Python", "SQL", "Spark"], "experienceYears": 6, "education": "Bachelor's degree", "location": "Riyadh, Saudi Arabia", "locationClassification": "Saudi Arabia", "relocation": False},
-    {"id": "demo-orbit-2", "name": "Demo Candidate Orbit", "title": "Senior Data Engineer", "industry": "Technology", "skills": ["Python", "SQL", "Airflow"], "experienceYears": 8, "education": "Master's degree", "location": "Jeddah, Saudi Arabia", "locationClassification": "Saudi Arabia", "relocation": False},
-    {"id": "demo-lumen-3", "name": "Demo Candidate Lumen", "title": "Analytics Engineer", "industry": "Technology", "skills": ["SQL", "dbt", "Python"], "experienceYears": 4, "education": "Bachelor's degree", "location": "Remote, outside Saudi Arabia", "locationClassification": "Outside Saudi Arabia", "relocation": True},
-]
-
-
 def score_candidate(candidate: dict[str, Any], request: CandidateSearchRequest) -> dict[str, Any]:
     requested = [skill.lower() for skill in request.skills]
     matched = [skill for skill in candidate["skills"] if skill.lower() in requested]
@@ -55,8 +48,7 @@ def ready() -> dict[str, Any]:
 def candidate_search(request: CandidateSearchRequest) -> dict[str, Any]:
     if request.experienceMax < request.experienceMin:
         raise HTTPException(status_code=422, detail="experienceMax must be greater than or equal to experienceMin")
-    results = sorted((score_candidate(candidate, request) for candidate in DEMO_CANDIDATES), key=lambda item: item["atsScore"], reverse=True)
-    return {"count": len(results), "candidates": results, "demo": True}
+    raise HTTPException(status_code=503, detail="candidate_provider_not_configured")
 
 
 @app.post("/api/v1/search-jobs")

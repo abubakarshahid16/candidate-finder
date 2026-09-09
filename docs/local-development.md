@@ -8,7 +8,7 @@ docker compose --env-file .env -f docker-compose.local.yml up -d
 npm.cmd run dev
 ```
 
-Open `http://localhost:3000`. Local demo mode opens directly without login or a frontend token. The UI sends one search request, then displays exactly three clearly labelled synthetic demo candidates.
+Open `http://localhost:3000`. Local development opens directly without login or a frontend token. The UI sends one search request to the configured candidate provider and displays provider results when available.
 
 ## Search API
 
@@ -24,7 +24,7 @@ Open `http://localhost:3000`. Local demo mode opens directly without login or a 
 }
 ```
 
-The response contains exactly three candidates. Each includes an ATS score out of 100, matched and missing skills, explanation, evidence confidence, location classification, and `demo: true`. Scores use only role, skills, experience, education, geography, and relocation.
+When a provider is configured, the response contains candidates with ATS scores out of 100, matched and missing skills, explanation, evidence confidence, location classification, and provider provenance. Scores use only role, skills, experience, education, geography, and relocation. Without a provider, the API returns `candidate_provider_not_configured`; it does not fabricate records.
 
 Health checks are `GET /health` and `GET /ready`.
 

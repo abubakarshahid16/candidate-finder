@@ -71,11 +71,12 @@ export default function Home() {
       const body = (await response.json()) as {
         details?: string[];
         error?: string;
+        detail?: string;
         candidates: Candidate[];
       };
       if (!response.ok)
         throw new Error(
-          body.details?.join(', ') || body.error || 'Search failed',
+          body.details?.join(', ') || body.error || body.detail || 'Search failed',
         );
       if (!Array.isArray(body.candidates) || body.candidates.length !== 3 || body.candidates.some((candidate) => typeof candidate.atsScore !== 'number')) {
         throw new Error('Search response did not contain exactly three scored candidates');
@@ -123,9 +124,8 @@ export default function Home() {
             <div className="mt-6 rounded-xl border border-[#dce6e2] bg-white p-6">
               <h2 className="font-semibold">Local development</h2>
               <p className="mt-2 text-sm text-slate-600">
-                This demo uses synthetic candidate records and does not require
-                login. Production authentication remains isolated in the
-                backend.
+                Candidate records come from a connected provider. No candidate
+                data is fabricated, and local authentication is disabled.
               </p>
             </div>
           </section>
@@ -134,9 +134,9 @@ export default function Home() {
             <h1 className="text-3xl font-semibold">
               Find qualified candidates
             </h1>
-            <p className="mt-2 text-slate-600">
-              Search synthetic demo records using job-relevant criteria only.
-            </p>
+        <p className="mt-2 text-slate-600">
+          Search connected candidate-provider records using job-relevant criteria only.
+        </p>
             <form
               onSubmit={search}
               className="mt-8 grid max-w-5xl gap-4 rounded-xl border border-[#dce6e2] bg-white p-6 md:grid-cols-2"
@@ -260,7 +260,7 @@ export default function Home() {
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Results</h2>
                   <span className="rounded-full bg-[#e8f5ec] px-3 py-1 text-xs font-semibold text-[#39705b]">
-                    Synthetic demo data · {candidates.length} candidates
+                    Provider results · {candidates.length} candidates
                   </span>
                 </div>
                 {candidates.length === 0 ? (
