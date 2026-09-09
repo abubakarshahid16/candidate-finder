@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import socket
 import uuid
 from typing import Any
 
@@ -47,19 +46,9 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "api", "runtime": "fastapi"}
 
 
-def can_connect(host: str, port: int) -> bool:
-    try:
-        with socket.create_connection((host, port), timeout=0.5):
-            return True
-    except OSError:
-        return False
-
-
 @app.get("/ready")
 def ready() -> dict[str, Any]:
-    database = can_connect(os.getenv("DATABASE_HOST", "postgres"), int(os.getenv("DATABASE_PORT", "5432")))
-    redis = can_connect(os.getenv("REDIS_HOST", "redis"), int(os.getenv("REDIS_PORT", "6379")))
-    return {"ready": database and redis, "database": database, "redis": redis}
+    return {"ready": True, "database": False, "redis": False, "mode": "stateless"}
 
 
 @app.post("/api/v1/candidate-search")

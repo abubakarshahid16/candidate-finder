@@ -14,13 +14,12 @@ import { buildWritebackPayload } from '../infra/local-service/integrations.mjs'
 import { createCircuitBreaker, withRetry } from '../infra/local-service/resilience.mjs'
 import { searchSyntheticCandidates, validateFilters } from '../infra/local-service/search.mjs'
 
-test('local compose profile contains the required lightweight services', async () => {
+test('local compose profile contains only stateless API and worker services', async () => {
   const compose = await readFile('docker-compose.local.yml', 'utf8')
-  for (const service of ['postgres:', 'redis:', 'api:', 'worker:']) {
+  for (const service of ['api:', 'worker:']) {
     assert.match(compose, new RegExp(`\\n  ${service.replace(':', '')}:`))
   }
-  assert.match(compose, /pgvector\/pgvector:pg16/)
-  assert.match(compose, /redis:7-alpine/)
+  assert.doesNotMatch(compose, /postgres:|redis:|DATABASE_HOST|REDIS_HOST/)
   assert.match(compose, /healthcheck:/)
 })
 
