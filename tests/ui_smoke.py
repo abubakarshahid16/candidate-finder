@@ -60,6 +60,11 @@ class CandidateFinderBrowserTests(unittest.TestCase):
         self.assertEqual(page.get_by_label("Industry").input_value(), "Technology")
         self.assertEqual(page.get_by_label("Location").input_value(), "Saudi Arabia")
 
+        page.get_by_label("Industry").select_option("Custom")
+        self.assertTrue(page.get_by_placeholder("Enter an industry").is_visible())
+        page.get_by_placeholder("Enter an industry").fill("Aviation")
+        page.get_by_label("Industry").select_option("Technology")
+
         page.get_by_role("button", name="+ AWS").click()
         self.assertIn("AWS", page.get_by_label("Required skills").input_value())
         page.get_by_label("Required skills").fill("phython")

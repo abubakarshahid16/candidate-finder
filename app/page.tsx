@@ -90,6 +90,7 @@ export default function Home() {
   const [profileUrl, setProfileUrl] = useState('');
   const [prompt, setPrompt] = useState('');
   const [jdFileName, setJdFileName] = useState('');
+  const [customIndustry, setCustomIndustry] = useState('');
   const [customLocation, setCustomLocation] = useState('');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selected, setSelected] = useState<Candidate | null>(null);
@@ -117,6 +118,7 @@ export default function Home() {
     setProfileUrl('');
     setPrompt('');
     setJdFileName('');
+    setCustomIndustry('');
     setCustomLocation('');
     setError('');
     setState('idle');
@@ -143,7 +145,7 @@ export default function Home() {
         body: JSON.stringify({
           prompt,
           role: form.role,
-          industry: form.industry,
+          industry: form.industry === 'Custom' ? customIndustry : form.industry,
           skills: form.skills.split(',').map((skill) => skill.trim()).filter(Boolean),
           experienceMin: minimum,
           experienceMax: maximum,
@@ -191,6 +193,8 @@ export default function Home() {
               setPrompt={setPrompt}
               jdFileName={jdFileName}
               setJdFileName={setJdFileName}
+              customIndustry={customIndustry}
+              setCustomIndustry={setCustomIndustry}
               customLocation={customLocation}
               setCustomLocation={setCustomLocation}
               state={state}
@@ -283,6 +287,8 @@ type SearchWorkspaceProps = {
   setPrompt: (value: string) => void;
   jdFileName: string;
   setJdFileName: (value: string) => void;
+  customIndustry: string;
+  setCustomIndustry: (value: string) => void;
   customLocation: string;
   setCustomLocation: (value: string) => void;
   state: SearchState;
@@ -293,7 +299,7 @@ type SearchWorkspaceProps = {
 };
 
 function SearchWorkspace(props: SearchWorkspaceProps) {
-  const { form, setForm, profileUrl, setProfileUrl, prompt, setPrompt, jdFileName, setJdFileName, customLocation, setCustomLocation, state, error, addSkill, resetSearch, search } = props;
+  const { form, setForm, profileUrl, setProfileUrl, prompt, setPrompt, jdFileName, setJdFileName, customIndustry, setCustomIndustry, customLocation, setCustomLocation, state, error, addSkill, resetSearch, search } = props;
   return (
     <>
       <section className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
@@ -323,7 +329,7 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
               <button
                 key={preset.name}
                 type="button"
-                onClick={() => { setForm({ role: preset.role, industry: preset.industry, skills: preset.skills, experienceMin: preset.experienceMin, experienceMax: preset.experienceMax, location: preset.location }); setCustomLocation(''); }}
+                onClick={() => { setForm({ role: preset.role, industry: preset.industry, skills: preset.skills, experienceMin: preset.experienceMin, experienceMax: preset.experienceMax, location: preset.location }); setCustomIndustry(''); setCustomLocation(''); }}
                 className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${form.role === preset.role ? 'border-[#159773] bg-[#e7f8f1] text-[#087455]' : 'border-[#dce6e9] bg-white text-slate-600 hover:border-[#9ccabd]'}`}
               >
                 {preset.name}
@@ -341,8 +347,19 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
                   <datalist id="job-title-suggestions">{presets.map((preset) => <option key={preset.role} value={preset.role}>{preset.role}</option>)}<option value="Product Manager">Product Manager</option></datalist>
                 </Field>
                 <Field label="Industry" icon={Target}>
-                  <input required list="industry-suggestions" value={form.industry} onChange={(event) => setForm({ ...form, industry: event.target.value })} placeholder="e.g. Technology" />
-                  <datalist id="industry-suggestions"><option value="Technology">Technology</option><option value="Financial services">Financial services</option><option value="Healthcare">Healthcare</option><option value="Energy">Energy</option><option value="Telecommunications">Telecommunications</option><option value="Cybersecurity">Cybersecurity</option></datalist>
+                  <select required value={form.industry} onChange={(event) => { setForm({ ...form, industry: event.target.value }); if (event.target.value !== 'Custom') setCustomIndustry(''); }}>
+                    <option value="" disabled>Select an industry</option>
+                    <option>Technology</option>
+                    <option>Financial services</option>
+                    <option>Healthcare</option>
+                    <option>Energy</option>
+                    <option>Telecommunications</option>
+                    <option>Cybersecurity</option>
+                    <option>Professional services</option>
+                    <option>Government</option>
+                    <option>Custom</option>
+                  </select>
+                  {form.industry === 'Custom' && <input required className="mt-3" value={customIndustry} onChange={(event) => setCustomIndustry(event.target.value)} placeholder="Enter an industry" />}
                 </Field>
                 <Field label="Minimum experience" icon={Clock3}>
                   <input required type="number" min="0" max="60" value={form.experienceMin} onChange={(event) => setForm({ ...form, experienceMin: event.target.value })} placeholder="3" />
@@ -397,6 +414,7 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
             <p className="mt-2 text-sm leading-6 text-slate-300">Claude discovers public evidence. Candidate Finder applies the same deterministic rubric to every result.</p>
             <div className="mt-6 space-y-3 border-y border-white/10 py-5">
               <SummaryLine label="Role" value={form.role || 'Not set'} />
+              <SummaryLine label="Industry" value={form.industry === 'Custom' ? customIndustry || 'Custom' : form.industry || 'Not set'} />
               <SummaryLine label="Skills" value={form.skills ? `${form.skills.split(',').filter(Boolean).length} selected` : 'Not set'} />
               <SummaryLine label="Experience" value={form.experienceMin && form.experienceMax ? `${form.experienceMin}–${form.experienceMax} years` : 'Not set'} />
               <SummaryLine label="Location" value={form.location === 'Custom' ? customLocation || 'Custom' : form.location || 'Not set'} />
