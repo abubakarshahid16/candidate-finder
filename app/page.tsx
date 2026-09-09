@@ -252,6 +252,26 @@ export default function Home() {
   );
   const [mustHave, setMustHave] = useState<string[]>(['Python', 'Spark']);
   const [excluded, setExcluded] = useState<string[]>([]);
+  const resetSearch = () => {
+    setQuery('');
+    setLocation('All locations');
+    setRole('Data engineering');
+    setIndustry('Technology');
+    setExperience('5–12 years');
+    setGeography('Saudi Arabia or outside Saudi Arabia');
+    setMustHave(['Python', 'Spark']);
+    setExcluded([]);
+    setLiveCandidates([]);
+    setShowBuilder(false);
+  };
+  const exportVisibleCandidates = () => {
+    const body = JSON.stringify(visible, null, 2);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([body], { type: 'application/json' }));
+    link.download = 'candidate-finder-results.json';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
   const visible = useMemo(() => {
     if (liveCandidates.length) return liveCandidates;
     const selectedRole = role.toLowerCase().includes('data science')
@@ -474,11 +494,11 @@ export default function Home() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button className="rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#58646a] shadow-sm">
+              <button onClick={exportVisibleCandidates} className="rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#58646a] shadow-sm">
                 <FileText size={14} className="mr-2 inline" />
                 Export
               </button>
-              <button className="rounded-lg bg-[#173f3b] px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#24554f]">
+              <button onClick={resetSearch} className="rounded-lg bg-[#173f3b] px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#24554f]">
                 <Plus size={14} className="mr-1.5 inline" /> New search
               </button>
             </div>
