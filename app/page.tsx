@@ -77,6 +77,9 @@ export default function Home() {
         throw new Error(
           body.details?.join(', ') || body.error || 'Search failed',
         );
+      if (!Array.isArray(body.candidates) || body.candidates.length !== 3 || body.candidates.some((candidate) => typeof candidate.atsScore !== 'number')) {
+        throw new Error('Search response did not contain exactly three scored candidates');
+      }
       setCandidates(body.candidates);
       setScreen('results');
       setState('idle');
@@ -260,7 +263,13 @@ export default function Home() {
                     Synthetic demo data · {candidates.length} candidates
                   </span>
                 </div>
-                <div className="grid gap-4 lg:grid-cols-3">
+                {candidates.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[#9bbdb0] bg-white p-8 text-center">
+                    <h3 className="text-lg font-semibold">No results yet</h3>
+                    <p className="mt-2 text-sm text-slate-600">Run a candidate search to receive exactly three scored results.</p>
+                    <button onClick={() => setScreen('search')} className="mt-5 rounded-lg bg-[#164d48] px-4 py-2 text-sm font-semibold text-white">Go to candidate search</button>
+                  </div>
+                ) : <div className="grid gap-4 lg:grid-cols-3">
                   {candidates.map((candidate) => (
                     <button
                       key={candidate.id}
@@ -288,7 +297,7 @@ export default function Home() {
                       </p>
                     </button>
                   ))}
-                </div>
+                </div>}
               </section>
             )}
             {selected && (
