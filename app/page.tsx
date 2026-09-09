@@ -86,6 +86,7 @@ export default function Home() {
             experienceMin: Number(form.experienceMin),
             experienceMax: Number(form.experienceMax),
             location: form.location === 'Custom' ? customLocation : form.location,
+            limit: 10,
             publicProfileUrls: profileUrl.trim() ? [profileUrl.trim()] : [],
           }),
         },
@@ -119,9 +120,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f6f8f7] text-[#183d39]">
-      <aside className="fixed inset-y-0 left-0 w-60 border-r border-[#dce6e2] bg-white p-5">
-        <div className="mb-12 text-lg font-bold">Candidate Finder</div>
-        <nav className="space-y-2">
+      <aside className="relative w-full border-b border-[#dce6e2] bg-white p-4 md:fixed md:inset-y-0 md:left-0 md:w-60 md:border-b-0 md:border-r md:p-5">
+        <div className="mb-4 text-lg font-bold md:mb-12">Candidate Finder</div>
+        <nav className="flex gap-2 md:block md:space-y-2">
           <Nav active={screen === 'search'} onClick={() => setScreen('search')}>
             Candidate search
           </Nav>
@@ -138,13 +139,13 @@ export default function Home() {
             Settings
           </Nav>
         </nav>
-        <div className="mt-12 rounded-lg bg-[#eef7f1] p-3 text-xs text-[#39705b]">
+        <div className="mt-12 hidden rounded-lg bg-[#eef7f1] p-3 text-xs text-[#39705b] md:block">
           Local development
           <br />
           Authentication disabled
         </div>
       </aside>
-      <main className="ml-60 min-h-screen p-8">
+      <main className="min-h-screen p-4 md:ml-60 md:p-8">
         {screen === 'settings' ? (
           <section className="mx-auto max-w-3xl">
             <h1 className="text-3xl font-semibold">Settings</h1>
@@ -158,6 +159,8 @@ export default function Home() {
           </section>
         ) : (
           <>
+            {screen === 'search' && (
+              <>
             <h1 className="text-3xl font-semibold">
               Find qualified candidates
             </h1>
@@ -329,27 +332,34 @@ export default function Home() {
                 {error}
               </div>
             )}
+              </>
+            )}
             {screen === 'results' && (
               <section className="mt-8 max-w-5xl">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Results</h2>
-                  <span className="rounded-full bg-[#e8f5ec] px-3 py-1 text-xs font-semibold text-[#39705b]">
-                    Provider results · {candidates.length} candidates
-                  </span>
+                <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                  <div>
+                    <h1 className="text-3xl font-semibold">Top candidates</h1>
+                    <p className="mt-1 text-sm text-slate-600">Ranked by deterministic ATS score and supported by public evidence.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[#e8f5ec] px-3 py-1 text-xs font-semibold text-[#39705b]">Top {candidates.length} verified</span>
+                    <button type="button" onClick={() => setScreen('search')} className="rounded-lg border border-[#9bbdb0] px-3 py-2 text-sm font-semibold">New search</button>
+                  </div>
                 </div>
                 {candidates.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-[#9bbdb0] bg-white p-8 text-center">
                     <h3 className="text-lg font-semibold">No results yet</h3>
-                    <p className="mt-2 text-sm text-slate-600">Run a candidate search to receive up to three verified, scored results.</p>
+                    <p className="mt-2 text-sm text-slate-600">Run a candidate search to receive up to 10 verified, scored results.</p>
                     <button onClick={() => setScreen('search')} className="mt-5 rounded-lg bg-[#164d48] px-4 py-2 text-sm font-semibold text-white">Go to candidate search</button>
                   </div>
                 ) : <div className="grid gap-4 lg:grid-cols-3">
-                  {candidates.map((candidate) => (
+                  {candidates.map((candidate, index) => (
                     <article
                       key={candidate.id}
                       className="rounded-xl border border-[#dce6e2] bg-white p-5 shadow-sm hover:border-[#5a9b7e]"
                     >
                       <button type="button" onClick={() => setSelected(candidate)} className="block w-full text-left">
+                      <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Rank #{index + 1}</div>
                       <div className="text-xs font-semibold text-[#c2764f]">
                         {candidate.label}
                       </div>

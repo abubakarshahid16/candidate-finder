@@ -4,20 +4,21 @@ Candidate Finder is an evidence-first talent discovery workspace for recruiters.
 
 ## Current status
 
-The repository contains a recruiter-facing local-first MVP surface with synthetic demo candidates, public URL ingestion, Redis-backed persistence, development/service-account authentication controls, JD extraction, deterministic ATS scoring, evidence provenance, recruiter workflow APIs, exports, and audit events. Production identity-provider integration, live ATS/CRM delivery, and managed backup operations remain deployment work.
+The active application is a stateless recruiter search flow backed by Claude web search. Recruiters can enter structured filters or upload a text/Markdown job description, retrieve up to 10 verified public profiles, inspect source links, and review a deterministic ATS score with an evidence breakdown. No candidate database or fabricated fallback records are used by the active flow.
 
 ## Local development
 
-Requirements: Node.js 22.13+.
+Requirements: Node.js 22.13+, Docker Desktop, and an Anthropic API key.
 
 ```powershell
-npm.cmd install
+Copy-Item .env.example .env
+docker compose --env-file .env -f docker-compose.local.yml up -d
 npm.cmd run dev
 ```
 
-Open the local URL printed by Vinext. Validate the production build with `npm.cmd run build`.
+Set `ANTHROPIC_API_KEY` and a valid `ANTHROPIC_MODEL` in `.env`, then open `http://localhost:3000`. Validate the production build with `npm.cmd run build`.
 
-The first production architecture should remain local-first on a 16 GB computer: PostgreSQL with pgvector, a small Redis instance, one API process, and one worker. Heavy models and paid providers are optional adapters, never required for the base development flow.
+The current search path runs without PostgreSQL or Redis and is suitable for a normal 16 GB development computer.
 
 ## Product and safety
 

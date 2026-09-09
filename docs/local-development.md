@@ -20,11 +20,12 @@ Open `http://localhost:3000`. Local development opens directly without login or 
   "skills": ["Python", "SQL"],
   "experienceMin": 3,
   "experienceMax": 10,
-  "location": "Saudi Arabia"
+  "location": "Saudi Arabia",
+  "limit": 10
 }
 ```
 
-When a provider is configured, the response contains candidates with ATS scores out of 100, matched and missing skills, explanation, evidence confidence, location classification, and provider provenance. Scores use only role, skills, experience, education, geography, and relocation. Without a provider, the API returns `candidate_provider_not_configured`; it does not fabricate records.
+When Claude web search is configured, the response contains up to 10 unique verified candidates sorted by ATS score. Each candidate includes matched and missing skills, a six-part score breakdown, explanation, evidence confidence, location classification, and public-source provenance. Scores use only role, skills, experience, education, geography/relocation, and industry. Fewer than 10 records means the provider could not verify 10 suitable public profiles; the service never pads results with fabricated candidates. Without `ANTHROPIC_API_KEY`, the API returns `claude_api_key_not_configured`.
 
 Health checks are `GET /health` and `GET /ready`.
 

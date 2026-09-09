@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from infra.fastapi.main import CandidateSearchRequest, score_candidate
+from infra.fastapi.main import CandidateSearchRequest, candidate_search, score_candidate
 
 
 class CandidateScoringTests(unittest.TestCase):
@@ -57,6 +58,33 @@ class CandidateScoringTests(unittest.TestCase):
         self.assertEqual(result["atsScore"], 0)
         self.assertEqual(result["sourceUrl"], "")
         self.assertNotIn("age", result)
+
+    def test_search_returns_at_most_ten_unique_ranked_candidates(self):
+        records = [
+            {
+                "name": f"Candidate {index}",
+                "title": "Data Scientist" if index % 2 == 0 else "Analyst",
+                "industry": "Technology",
+                "skills": ["Python"] if index < 6 else [],
+                "experienceYears": 5,
+                "education": "Degree",
+                "location": "Riyadh",
+                "locationClassification": "Saudi Arabia",
+                "sourceUrl": f"https://profiles.example/{index}",
+                "evidenceConfidence": "High",
+            }
+            for index in range(12)
+        ]
+        records.append(records[0].copy())
+
+        with patch("infra.fastapi.main.claude_candidates", return_value=records):
+            response = candidate_search(self.request(limit=10))
+
+        self.assertEqual(response["count"], 10)
+        self.assertEqual(len(response["candidates"]), 10)
+        self.assertEqual(len({candidate["sourceUrl"] for candidate in response["candidates"]}), 10)
+        scores = [candidate["atsScore"] for candidate in response["candidates"]]
+        self.assertEqual(scores, sorted(scores, reverse=True))
 
 
 if __name__ == "__main__":
