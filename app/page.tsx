@@ -21,6 +21,7 @@ type Candidate = {
 
 const initialForm = {
   role: 'Data Engineer',
+  industry: 'Technology',
   skills: 'Python, SQL',
   experienceMin: '3',
   experienceMax: '10',
@@ -55,6 +56,7 @@ export default function Home() {
           body: JSON.stringify({
             prompt,
             role: form.role,
+            industry: form.industry,
             skills: form.skills
               .split(',')
               .map((skill) => skill.trim())
@@ -136,13 +138,16 @@ export default function Home() {
               onSubmit={search}
               className="mt-8 grid max-w-5xl gap-4 rounded-xl border border-[#dce6e2] bg-white p-6 md:grid-cols-2"
             >
-              <Field label="Job title">
+          <Field label="Job title">
                 <input
                   required
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                 />
-              </Field>
+          </Field>
+          <Field label="Industry">
+            <input required value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Technology" />
+          </Field>
               <Field label="Required skills">
                 <input
                   required
