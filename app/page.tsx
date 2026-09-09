@@ -21,12 +21,12 @@ type Candidate = {
 };
 
 const initialForm = {
-  role: 'Data Engineer',
-  industry: 'Technology',
-  skills: 'Python, SQL',
-  experienceMin: '3',
-  experienceMax: '10',
-  location: 'Saudi Arabia',
+  role: '',
+  industry: '',
+  skills: '',
+  experienceMin: '',
+  experienceMax: '',
+  location: '',
 };
 
 export default function Home() {
@@ -191,6 +191,7 @@ export default function Home() {
                     setForm({ ...form, location: e.target.value })
                   }
                 >
+                  <option value="" disabled>Select location</option>
                   <option>Saudi Arabia</option>
                   <option>Outside Saudi Arabia</option>
                   <option>Custom</option>
