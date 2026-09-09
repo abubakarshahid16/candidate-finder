@@ -145,20 +145,25 @@ export default function Home() {
           <Field label="Job title">
                 <input
                   required
+                  list="job-title-options"
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                 />
+                <datalist id="job-title-options"><option value="Data Engineer" /><option value="Software Engineer" /><option value="Machine Learning Engineer" /><option value="Product Manager" /><option value="Security Engineer" /></datalist>
           </Field>
           <Field label="Industry">
-            <input required value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Technology" />
+            <input required list="industry-options" value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Technology" />
+            <datalist id="industry-options"><option value="Technology" /><option value="Financial services" /><option value="Telecommunications" /><option value="Energy" /><option value="Healthcare" /></datalist>
           </Field>
               <Field label="Required skills">
                 <input
                   required
+                  list="skill-options"
                   value={form.skills}
                   onChange={(e) => setForm({ ...form, skills: e.target.value })}
                   placeholder="Python, SQL"
                 />
+                <datalist id="skill-options"><option value="Python, SQL" /><option value="Python, Spark" /><option value="Java, Spring" /><option value="JavaScript, React" /><option value="SQL, dbt" /></datalist>
               </Field>
               <Field label="Minimum experience">
                 <input
