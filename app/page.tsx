@@ -36,6 +36,7 @@ export default function Home() {
   const [profileUrl, setProfileUrl] = useState('');
   const [prompt, setPrompt] = useState('');
   const [jdFileName, setJdFileName] = useState('');
+  const [customLocation, setCustomLocation] = useState('');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selected, setSelected] = useState<Candidate | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -63,7 +64,7 @@ export default function Home() {
               .filter(Boolean),
             experienceMin: Number(form.experienceMin),
             experienceMax: Number(form.experienceMax),
-            location: form.location,
+            location: form.location === 'Custom' ? customLocation : form.location,
             profileUrl,
           }),
         },
@@ -182,13 +183,18 @@ export default function Home() {
                 />
               </Field>
               <Field label="Location">
-                <input
+                <select
                   required
                   value={form.location}
                   onChange={(e) =>
                     setForm({ ...form, location: e.target.value })
                   }
-                />
+                >
+                  <option>Saudi Arabia</option>
+                  <option>Outside Saudi Arabia</option>
+                  <option>Custom</option>
+                </select>
+                {form.location === 'Custom' && <input required className="mt-2" value={customLocation} onChange={(e) => setCustomLocation(e.target.value)} placeholder="Enter city, country, or region" />}
               </Field>
               <Field label="Optional authorized profile/provider URL">
                 <input
