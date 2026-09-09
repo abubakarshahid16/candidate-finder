@@ -8,6 +8,9 @@ services:
     command: ["sh", "-c", "pip install --no-cache-dir -r infra/fastapi/requirements.txt && uvicorn infra.fastapi.main:app --host 0.0.0.0 --port 3001"]
     ports:
       - "${API_PORT:-3001}:3001"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet}
     volumes:
       - ./:/workspace:ro
     healthcheck:
