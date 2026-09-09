@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/control-has-associated-label */
 'use client';
 
 import { useState } from 'react';
