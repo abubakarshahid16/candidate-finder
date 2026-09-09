@@ -1,0 +1,110 @@
+name: candidate-finder-local
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-candidate_finder}
+      POSTGRES_USER: ${POSTGRES_USER:-candidate_finder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-candidate_finder_local}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - candidate_finder_pgdata:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 192M
+
+  api:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /workspace
+    command: ["node", "infra/local-service/api.mjs"]
+    environment:
+      API_PORT: 3001
+      DEV_AUTH_ENABLED: "true"
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_URL: postgresql://${POSTGRES_USER:-candidate_finder}:${POSTGRES_PASSWORD:-candidate_finder_local}@postgres:5432/${POSTGRES_DB:-candidate_finder}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "${API_PORT:-3001}:3001"
+    volumes:
+      - ./:/workspace:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  worker:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /workspace
+    command: ["node", "infra/local-service/worker.mjs"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-candidate_finder}:${POSTGRES_PASSWORD:-candidate_finder_local}@postgres:5432/${POSTGRES_DB:-candidate_finder}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379
+      WORKER_PORT: 3002
+    ports:
+      - "${WORKER_PORT:-3002}:3002"
+    volumes:
+      - ./:/workspace:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:3002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+volumes:
+  candidate_finder_pgdata:

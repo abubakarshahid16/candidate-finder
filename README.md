@@ -4,7 +4,7 @@ Candidate Finder is an evidence-first talent discovery workspace for recruiters.
 
 ## Current status
 
-The repository currently contains the recruiter-facing MVP surface with synthetic demo candidates. Live provider connectors, persistence, authentication, and exports are intentionally not implemented yet.
+The repository contains a recruiter-facing local-first MVP surface with synthetic demo candidates, public URL ingestion, Redis-backed persistence, development/service-account authentication controls, JD extraction, deterministic ATS scoring, evidence provenance, recruiter workflow APIs, exports, and audit events. Production identity-provider integration, live ATS/CRM delivery, and managed backup operations remain deployment work.
 
 ## Local development
 

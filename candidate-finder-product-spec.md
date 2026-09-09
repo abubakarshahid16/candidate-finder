@@ -9,6 +9,8 @@ Output:
 **Primary market:** Saudi Arabia and international recruiting teams  
 **Core principle:** Discover and rank publicly available professional information responsibly, with human review and evidence attached to every material claim.
 
+**Permanent cost constraint:** The product will not use paid APIs. AI and discovery must use local/open-source processing, Ollama with a small local model, permitted free-tier APIs, public search APIs with free quotas, and user-provided public profile URLs. Any provider that requires payment is out of scope unless the product owner explicitly changes this constraint.
+
 ---
 
 ## 1. Product brief
@@ -257,6 +259,16 @@ The product must run locally for development, demonstrations, and small internal
 - Support local models through Ollama or another OpenAI-compatible local endpoint.
 - Support free-tier or no-cost APIs only where their terms, quotas, privacy rules, and commercial-use rights permit them; never promise unlimited free access.
 - If no external API key is configured, continue with local search, manual URL ingestion, rule-based extraction, and clearly labeled reduced capabilities.
+
+Approved extraction fallback order:
+
+1. Local deterministic/rule-based extraction for titles, dates, locations, skills, and URLs.
+2. Ollama with a small quantized local model when available on the 16 GB RAM computer.
+3. Permitted free-tier APIs only when their quotas, terms, privacy rules, and commercial-use rights allow the intended use.
+4. Public search APIs with free quotas for discovery.
+5. User-provided public profile URLs for targeted enrichment.
+
+The system must remain functional when Ollama and all external APIs are unavailable. It must show which extraction path was used and label lower-confidence results accordingly.
 
 The local profile should reserve memory for the operating system and browser. Recommended starting limits are approximately 2â€“3 GB for PostgreSQL, 0.5â€“1 GB for Redis, 1â€“2 GB for API/workers, and a separately started small quantized model only when required. Heavy embedding, crawling, and re-ranking jobs should run sequentially or through an external worker.
 
@@ -712,5 +724,4 @@ What must not be added in this issue?
 ### Definition of complete for every issue
 
 An issue is complete only when the implementation, automated tests, authorization behavior, error states, audit requirements, documentation, and local 16 GB RAM setup have been verified. A feature that works only with a paid API or powerful server is incomplete unless its limitation is explicitly documented.
-
 

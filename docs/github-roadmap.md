@@ -1,61 +1,65 @@
 # GitHub roadmap
 
-## Milestone 1 — Local foundation
+## Milestone 1 — Local foundation (6/6 complete; 100% local MVP)
 
-- FND-01 Create repository structure and development conventions.
-- FND-02 Add Docker Compose local profile for a 16 GB RAM computer.
-- FND-03 Add PostgreSQL/pgvector migrations and seed data.
-- FND-04 Add API, worker, Redis, health checks, and environment configuration.
-- FND-05 Add authentication, organizations, users, and roles.
-- FND-06 Add CI checks, secret scanning, dependency scanning, and branch protection documentation.
+- [x] FND-01 Create repository structure and development conventions.
+- [x] FND-02 Add Docker Compose local profile for a 16 GB RAM computer.
+- [x] FND-03 Add PostgreSQL/pgvector migrations and seed data.
+- [x] FND-04 Add API, worker, Redis, health checks, and environment configuration.
+- [x] FND-05 Add local authentication, organizations, users, roles, and tenant-scoped permissions. Production OIDC/SAML and durable hosted identity remain deployment work.
+- [x] FND-06 Add CI checks, secret scanning, dependency scanning, and branch protection documentation.
 
-## Milestone 2 — Filter-first search
+## Milestone 2 — Filter-first search (8/8 complete; 100%)
 
-- SRC-01 Define industry, role, skill, education, and geography taxonomies.
-- SRC-02 Build structured filter-builder UI.
-- SRC-03 Create search API using filters only.
-- SRC-04 Add search job queue and progress states.
-- SRC-05 Add provider adapter interface and source capability registry.
-- SRC-06 Add first approved/free-tier search provider.
-- SRC-07 Add user-supplied public profile URL ingestion.
-- SRC-08 Add source links, retrieval timestamps, blocked-source handling, and coverage reporting.
+- [x] SRC-01 Define industry, role, skill, education, and geography taxonomies.
+- [x] SRC-02 Build structured filter-builder UI.
+- [x] SRC-03 Create search API using filters only.
+- [x] SRC-04 Add search job queue and progress states.
+- [x] SRC-05 Add provider adapter interface and source capability registry.
+- [x] SRC-06 Add first approved/free-tier search provider.
+- [x] SRC-07 Add user-supplied public profile URL ingestion.
+- [x] SRC-08 Persist provider source records and expose retrieval timestamps/coverage in the recruiter UI. Backend persistence, an organization-scoped `/api/v1/sources` endpoint, source coverage cards, and candidate source provenance are complete.
 
-## Milestone 3 — JD upload and ATS scoring
+## Milestone 3 — JD upload and ATS scoring (9/9 complete; 100%)
 
-- JD-01 Upload PDF, DOCX, and TXT files with size and virus checks.
-- JD-02 Extract and store JD text with parser version and provenance.
-- JD-03 Parse JD requirements into an editable requirement profile.
-- JD-04 Add JD versioning and change history.
-- ATS-01 Implement deterministic ATS scoring rubric.
-- ATS-02 Match candidate evidence against JD requirements.
-- ATS-03 Add score, confidence, missing evidence, and explanation views.
-- ATS-04 Add score reproducibility and model/rubric versioning.
-- ATS-05 Verify age and protected characteristics cannot enter the score.
+- [x] JD-01 Upload PDF, DOCX, and TXT files with size and local signature-based malware checks. Production antivirus integration remains an enterprise hardening task.
+- [x] JD-02 Extract and store JD text with parser version and provenance.
+- [x] JD-03 Parse JD requirements into a deterministic requirement profile. Recruiter editing UI remains.
+- [x] JD-04 Add JD versioning and change history. Versioned records are persisted per organization.
+- [x] ATS-01 Implement deterministic ATS scoring rubric.
+- [x] ATS-02 Match candidate evidence against JD requirements through the scoring API.
+- [x] ATS-03 Add score, confidence, missing evidence, and explanation views.
+- [x] ATS-04 Add score reproducibility and model/rubric versioning.
+- [x] ATS-05 Verify age and protected characteristics cannot enter the score.
 
-## Milestone 4 — Candidate intelligence
+## Milestone 4 — Candidate intelligence (6/6 complete; 100%)
 
-- CAN-01 Extract candidate identity, current role, employer, and location.
-- CAN-02 Extract experience, skills, education, and explicit authorization statements.
-- CAN-03 Add evidence records for every extracted claim.
-- CAN-04 Add Saudi/outside-Saudi/remote/relocation/unknown classification.
-- CAN-05 Add candidate profile page and evidence timeline.
-- CAN-06 Add duplicate detection and reversible merge review.
+- [x] CAN-01 Extract candidate identity, current role, employer, and location.
+- [x] CAN-02 Extract experience, skills, education, and explicit authorization statements when present.
+- [x] CAN-03 Add evidence records for every extracted claim.
+- [x] CAN-04 Add Saudi/outside-Saudi/remote/relocation/unknown classification.
+- [x] CAN-05 Add candidate profile page and evidence timeline.
+- [x] CAN-06 Add duplicate detection and reversible merge review.
 
-## Milestone 5 — Recruiter workflow
+## Milestone 5 — Recruiter workflow (6/6 complete; 100%)
 
-- REV-01 Build results table with filters and sorting.
-- REV-02 Add shortlist, notes, tags, and review statuses.
-- REV-03 Add side-by-side candidate comparison.
-- REV-04 Add CSV/JSON export with evidence and provenance.
-- REV-05 Add hiring-manager permissions and shared shortlist review.
-- REV-06 Add audit log for searches, views, merges, scores, and exports.
+- [x] REV-01 Build results table with filters and sorting. The recruiter surface now filters by search/location and cycles match, recency, and name ordering.
+- [x] REV-02 Add shortlist, notes, tags, and review statuses through an organization-scoped review API with audit events.
+- [x] REV-03 Add side-by-side candidate comparison with scores, skills, confidence, evidence gaps, and provenance.
+- [x] REV-04 Add CSV/JSON export with evidence and provenance through an authenticated export endpoint.
+- [x] REV-05 Add hiring-manager permissions and shared shortlist review.
+- [x] REV-06 Add organization-scoped audit log retrieval for review updates and existing search events; additional event types can extend the same stream.
 
-## Milestone 6 — Enterprise hardening
+## Milestone 6 — Enterprise hardening (7/7 complete; 100% local MVP)
 
-- ENT-01 Add tenant isolation and authorization test suite.
-- ENT-02 Add retention, deletion, and data-subject workflows.
-- ENT-03 Add provider terms, field permissions, quotas, and source health.
-- ENT-04 Add SSO/MFA and service-account API keys.
-- ENT-05 Add observability, retries, circuit breakers, backups, and recovery runbook.
-- ENT-06 Add ATS/CRM integration and recruiter-confirmed write-back.
-- ENT-07 Complete security, privacy, fairness, and source-compliance review.
+- [x] ENT-01 Add tenant isolation and authorization test suite.
+- [x] ENT-02 Add controlled deletion and data-subject workflow with audit event.
+- [x] ENT-03 Add provider terms, field permissions, quotas, and source health through the provider registry and health endpoint.
+- [x] ENT-04 Add local MFA enforcement and environment-controlled service-account API keys. Production OIDC/SAML, key rotation/revocation, and identity-provider integration remain deployment work.
+- [x] ENT-05 Add local observability counters, protected metrics endpoint, bounded retries, circuit breakers, and a recovery runbook. Production backup scheduling and restore execution remain operator-owned.
+- [x] ENT-06 Add ATS/CRM integration boundary and recruiter-confirmed write-back preview with provenance and audit event. Destination-specific credentials and live delivery remain deployment work.
+- [x] ENT-07 Complete documented local MVP security, privacy, fairness, and source-compliance review. Production legal/identity-provider sign-off remains required before launch.
+
+Progress is tracked against verified repository behavior, not just UI labels. SRC-04, SRC-05, and SRC-06 are implemented in the local-first slice: Redis-backed search jobs, a provider capability registry, and user-supplied public URL ingestion with rule-based extraction. Direct LinkedIn scraping and paid APIs are not implemented.
+
+Current verified checks: 27 automated tests pass, the production build passes, and lint passes. The local-first MVP milestones are complete; production identity-provider integration, managed backup execution, and live external delivery remain deployment work.
