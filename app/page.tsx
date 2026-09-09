@@ -9,6 +9,7 @@ const initialForm = { role: 'Data Engineer', skills: 'Python, SQL', experienceMi
 export default function Home() {
   const [screen, setScreen] = useState<'search' | 'results' | 'settings'>('search')
   const [form, setForm] = useState(initialForm)
+  const [profileUrl, setProfileUrl] = useState('')
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [selected, setSelected] = useState<Candidate | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -44,6 +45,7 @@ export default function Home() {
           <Field label="Minimum experience"><input required type="number" min="0" value={form.experienceMin} onChange={(e) => setForm({ ...form, experienceMin: e.target.value })} /></Field>
           <Field label="Maximum experience"><input required type="number" min="0" value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
           <Field label="Location"><input required value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
+          <Field label="Optional authorized profile/provider URL"><input value={profileUrl} onChange={(e) => setProfileUrl(e.target.value)} placeholder="https://provider.example/profile" /></Field>
           <div className="flex items-end"><button disabled={state === 'loading'} className="w-full rounded-lg bg-[#164d48] px-5 py-3 font-semibold text-white disabled:opacity-50">{state === 'loading' ? 'Finding candidates…' : 'Find candidates'}</button></div>
         </form>
         {state === 'error' && <div className="mt-4 max-w-5xl rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</div>}
