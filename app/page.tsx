@@ -10,6 +10,7 @@ export default function Home() {
   const [screen, setScreen] = useState<'search' | 'results' | 'settings'>('search')
   const [form, setForm] = useState(initialForm)
   const [profileUrl, setProfileUrl] = useState('')
+  const [prompt, setPrompt] = useState('')
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [selected, setSelected] = useState<Candidate | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -18,7 +19,7 @@ export default function Home() {
   const search = async (event: { preventDefault: () => void }) => {
     event.preventDefault(); setState('loading'); setError(''); setCandidates([]); setSelected(null)
     try {
-      const response = await fetch('http://localhost:3001/api/v1/candidate-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: form.role, skills: form.skills.split(',').map((skill) => skill.trim()).filter(Boolean), experienceMin: Number(form.experienceMin), experienceMax: Number(form.experienceMax), location: form.location }) })
+      const response = await fetch('http://localhost:3001/api/v1/candidate-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, role: form.role, skills: form.skills.split(',').map((skill) => skill.trim()).filter(Boolean), experienceMin: Number(form.experienceMin), experienceMax: Number(form.experienceMax), location: form.location, profileUrl }) })
       const body = await response.json() as { details?: string[]; error?: string; candidates: Candidate[] }
       if (!response.ok) throw new Error(body.details?.join(', ') || body.error || 'Search failed')
       setCandidates(body.candidates); setScreen('results'); setState('idle')
@@ -46,6 +47,7 @@ export default function Home() {
           <Field label="Maximum experience"><input required type="number" min="0" value={form.experienceMax} onChange={(e) => setForm({ ...form, experienceMax: e.target.value })} /></Field>
           <Field label="Location"><input required value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
           <Field label="Optional authorized profile/provider URL"><input value={profileUrl} onChange={(e) => setProfileUrl(e.target.value)} placeholder="https://provider.example/profile" /></Field>
+          <div className="md:col-span-2"><Field label="Optional search prompt"><textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Example: Find senior data engineers with strong Python and SQL experience in Saudi Arabia." rows={3} className="block w-full resize-y rounded-lg border border-[#cbdad5] bg-white p-3 font-normal text-[#183d39]" /></Field></div>
           <div className="flex items-end"><button disabled={state === 'loading'} className="w-full rounded-lg bg-[#164d48] px-5 py-3 font-semibold text-white disabled:opacity-50">{state === 'loading' ? 'Finding candidates…' : 'Find candidates'}</button></div>
         </form>
         {state === 'error' && <div className="mt-4 max-w-5xl rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</div>}
