@@ -159,12 +159,10 @@ export default function Home() {
               <Field label="Required skills">
                 <input
                   required
-                  list="skill-options"
                   value={form.skills}
                   onChange={(e) => setForm({ ...form, skills: e.target.value })}
                   placeholder="Python, SQL"
                 />
-                <datalist id="skill-options"><option value="Python, SQL" /><option value="Python, Spark" /><option value="Java, Spring" /><option value="JavaScript, React" /><option value="SQL, dbt" /></datalist>
               </Field>
               <Field label="Minimum experience">
                 <input
