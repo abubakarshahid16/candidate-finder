@@ -870,6 +870,15 @@ function FilterBuilder({
   setExcluded: (v: string[]) => void;
   onClose: () => void;
 }) {
+  const [customIndustries, setCustomIndustries] = useState<string[]>([]);
+  const addCustomIndustry = () => {
+    const value = window.prompt('Enter an industry');
+    const customIndustry = value?.trim();
+    if (customIndustry && !customIndustries.includes(customIndustry)) {
+      setCustomIndustries([...customIndustries, customIndustry]);
+      setIndustry(customIndustry);
+    }
+  };
   const [customRoles, setCustomRoles] = useState<string[]>([]);
   const addCustomRole = () => {
     const value = window.prompt('Enter a profession or role');
@@ -928,13 +937,15 @@ function FilterBuilder({
           <select
             className="h-10 w-full rounded-lg border border-[#dbe6df] bg-white px-3 text-xs font-medium text-[#4f6258]"
             value={industry}
-            onChange={(e) => setIndustry(e.target.value)}
+            onChange={(e) => e.target.value === '__custom__' ? addCustomIndustry() : setIndustry(e.target.value)}
           >
             <option>Technology</option>
             <option>Financial services</option>
             <option>Telecommunications</option>
             <option>Energy</option>
             <option>Healthcare</option>
+            {customIndustries.map((customIndustry) => <option key={customIndustry}>{customIndustry}</option>)}
+            <option value="__custom__">＋ Add custom industry</option>
           </select>
         </Field>
         <Field label="Profession / role">
