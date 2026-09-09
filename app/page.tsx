@@ -34,7 +34,7 @@ export default function Home() {
         <Nav active={screen === 'results'} onClick={() => setScreen('results')}>Results</Nav>
         <Nav active={screen === 'settings'} onClick={() => setScreen('settings')}>Settings</Nav>
       </nav>
-      <div className="mt-12 rounded-lg bg-[#eef7f1] p-3 text-xs text-[#39705b]">Local demo mode<br />Authentication disabled</div>
+      <div className="mt-12 rounded-lg bg-[#eef7f1] p-3 text-xs text-[#39705b]">Local development<br />Authentication disabled</div>
     </aside>
     <main className="ml-60 min-h-screen p-8">
       {screen === 'settings' ? <section className="mx-auto max-w-3xl"><h1 className="text-3xl font-semibold">Settings</h1><div className="mt-6 rounded-xl border border-[#dce6e2] bg-white p-6"><h2 className="font-semibold">Local development</h2><p className="mt-2 text-sm text-slate-600">This demo uses synthetic candidate records and does not require login. Production authentication remains isolated in the backend.</p></div></section> : <>
