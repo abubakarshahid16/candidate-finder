@@ -8,7 +8,7 @@ type Candidate = {
   name: string;
   title: string;
   skills: string[];
-  experienceYears: number;
+  experienceYears: number | null;
   education: string;
   location: string;
   locationClassification: string;
@@ -66,7 +66,7 @@ export default function Home() {
             experienceMin: Number(form.experienceMin),
             experienceMax: Number(form.experienceMax),
             location: form.location === 'Custom' ? customLocation : form.location,
-            profileUrl,
+            publicProfileUrls: profileUrl.trim() ? [profileUrl.trim()] : [],
           }),
         },
       );
@@ -87,7 +87,12 @@ export default function Home() {
       setScreen('results');
       setState('idle');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Search failed');
+      const message = caught instanceof Error ? caught.message : 'Search failed';
+      setError(
+        message === 'Failed to fetch'
+          ? 'Cannot reach the candidate-search API. Make sure the API is running on http://localhost:3001, then try again.'
+          : message,
+      );
       setState('error');
     }
   };
@@ -274,7 +279,7 @@ export default function Home() {
                 {candidates.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-[#9bbdb0] bg-white p-8 text-center">
                     <h3 className="text-lg font-semibold">No results yet</h3>
-                    <p className="mt-2 text-sm text-slate-600">Run a candidate search to receive exactly three scored results.</p>
+                    <p className="mt-2 text-sm text-slate-600">Run a candidate search to receive up to three verified, scored results.</p>
                     <button onClick={() => setScreen('search')} className="mt-5 rounded-lg bg-[#164d48] px-4 py-2 text-sm font-semibold text-white">Go to candidate search</button>
                   </div>
                 ) : <div className="grid gap-4 lg:grid-cols-3">
@@ -291,7 +296,7 @@ export default function Home() {
                         {candidate.name}
                       </h3>
                       <p className="text-sm text-slate-600">
-                        {candidate.title} · {candidate.experienceYears} years
+                        {candidate.title} · {candidate.experienceYears ?? 'Unknown'} years
                       </p>
                       <div className="mt-4 text-3xl font-bold text-[#26705a]">
                         {candidate.atsScore}
