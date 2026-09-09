@@ -101,7 +101,7 @@ export default function Home() {
         throw new Error(
           body.details?.join(', ') || body.error || body.detail || 'Search failed',
         );
-      if (!Array.isArray(body.candidates) || body.candidates.length === 0 || body.candidates.some((candidate) => typeof candidate.atsScore !== 'number')) {
+      if (!Array.isArray(body.candidates) || body.candidates.some((candidate) => typeof candidate.atsScore !== 'number')) {
         throw new Error('Search response did not contain scored candidate results');
       }
       setCandidates(body.candidates);

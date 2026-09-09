@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import patch
 
-from infra.fastapi.main import CandidateSearchRequest, candidate_search, score_candidate
+from fastapi.testclient import TestClient
+
+from infra.fastapi.main import CandidateSearchRequest, app, candidate_search, score_candidate
 
 
 class CandidateScoringTests(unittest.TestCase):
@@ -85,6 +87,52 @@ class CandidateScoringTests(unittest.TestCase):
         self.assertEqual(len({candidate["sourceUrl"] for candidate in response["candidates"]}), 10)
         scores = [candidate["atsScore"] for candidate in response["candidates"]]
         self.assertEqual(scores, sorted(scores, reverse=True))
+
+
+class CandidateSearchValidationTests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+        self.valid = {
+            "role": "Data Engineer",
+            "industry": "Technology",
+            "skills": ["Python", "SQL"],
+            "experienceMin": 3,
+            "experienceMax": 10,
+            "location": "Saudi Arabia",
+            "limit": 10,
+        }
+
+    def test_invalid_filter_contracts_return_422(self):
+        cases = [
+            {**self.valid, "role": ""},
+            {**self.valid, "skills": []},
+            {**self.valid, "experienceMin": 11},
+            {**self.valid, "limit": 11},
+            {**self.valid, "prompt": "x" * 12001},
+        ]
+        for payload in cases:
+            with self.subTest(payload=payload):
+                response = self.client.post("/api/v1/candidate-search", json=payload)
+                self.assertEqual(response.status_code, 422)
+
+    def test_empty_provider_result_is_a_valid_empty_state(self):
+        with patch("infra.fastapi.main.claude_candidates", return_value=[]):
+            response = self.client.post("/api/v1/candidate-search", json=self.valid)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 0)
+        self.assertEqual(response.json()["candidates"], [])
+
+    def test_local_frontend_origin_is_allowed(self):
+        response = self.client.options(
+            "/api/v1/candidate-search",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["access-control-allow-origin"], "http://localhost:3000")
 
 
 if __name__ == "__main__":

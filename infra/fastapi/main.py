@@ -204,21 +204,21 @@ def claude_candidates(request: CandidateSearchRequest) -> list[dict[str, Any]]:
         if not text:
             raise RuntimeError(f"claude_response_missing_text_blocks:{','.join(block.get('type', 'unknown') for block in result.get('content', []))}")
         text = text.removeprefix("```json").removesuffix("```").strip()
-        records = []
+        records = None
         decoder = json.JSONDecoder()
         for start, character in enumerate(text):
             if character != "[":
                 continue
             try:
                 candidate_array, _ = decoder.raw_decode(text[start:])
-                if isinstance(candidate_array, list) and candidate_array and all(isinstance(item, dict) for item in candidate_array):
+                if isinstance(candidate_array, list) and all(isinstance(item, dict) for item in candidate_array):
                     records = candidate_array
                     break
             except json.JSONDecodeError:
                 continue
-        if not records:
+        if records is None:
             raise RuntimeError("claude_response_missing_candidate_array")
-        return records if isinstance(records, list) else []
+        return records
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"claude_search_failed: {error}") from error
 
