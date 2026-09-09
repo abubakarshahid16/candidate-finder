@@ -46,6 +46,7 @@ type Candidate = {
   explanation: string;
   recommendation: string;
   scoreBreakdown: Record<string, number>;
+  scoreBreakdownMaximums: Record<string, number>;
   sourceUrl: string;
   label: string;
 };
@@ -306,7 +307,7 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
         <div>
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-[#087455]"><Sparkles size={17} /> Evidence-first talent search</div>
           <h1 className="max-w-3xl text-3xl font-bold tracking-[-.035em] text-[#0d2633] sm:text-4xl">Find qualified candidates with evidence you can review.</h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">Define the role, add the must-have skills, and receive up to ten ranked public profiles with transparent ATS scoring.</p>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">Define the role, optionally add priority skills, and receive up to ten ranked public profiles with transparent ATS scoring.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <TrustPill icon={ShieldCheck} text="Public sources" />
@@ -379,9 +380,9 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
               </div>
             </FormSection>
 
-            <FormSection number="02" title="Required skills" description="Separate must-have skills with commas. These carry 40% of the ATS score.">
-              <Field label="Required skills" icon={Check}>
-                <input required value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Python, SQL, Spark" />
+            <FormSection number="02" title="Skills" description="Optional. Add comma-separated skills to make them 40% of the ATS rubric; leave blank to score the remaining criteria only.">
+              <Field label="Skills (optional)" icon={Check}>
+                <input value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Python, SQL, Spark" />
               </Field>
               <div className="mt-3 flex flex-wrap gap-2">
                 {suggestedSkills.map((skill) => <button key={skill} type="button" onClick={() => addSkill(skill)} className="rounded-lg bg-[#eff6f5] px-2.5 py-1.5 text-xs font-bold text-[#286a5a] transition hover:bg-[#ddf1eb]">+ {skill}</button>)}
@@ -415,7 +416,7 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
             <div className="mt-6 space-y-3 border-y border-white/10 py-5">
               <SummaryLine label="Role" value={form.role || 'Not set'} />
               <SummaryLine label="Industry" value={form.industry === 'Custom' ? customIndustry || 'Custom' : form.industry || 'Not set'} />
-              <SummaryLine label="Skills" value={form.skills ? `${form.skills.split(',').filter(Boolean).length} selected` : 'Not set'} />
+              <SummaryLine label="Skills" value={form.skills ? `${form.skills.split(',').filter(Boolean).length} selected` : 'Any skills'} />
               <SummaryLine label="Experience" value={form.experienceMin && form.experienceMax ? `${form.experienceMin}–${form.experienceMax} years` : 'Not set'} />
               <SummaryLine label="Location" value={form.location === 'Custom' ? customLocation || 'Custom' : form.location || 'Not set'} />
             </div>
@@ -524,7 +525,7 @@ function CandidateSheet({ candidate, onClose }: { candidate: Candidate; onClose:
           <DetailSection title="Match summary"><p className="text-sm leading-7 text-slate-600">{candidate.explanation}</p><div className="mt-4 flex flex-wrap gap-2">{candidate.matchedSkills.map((skill) => <span key={skill} className="inline-flex items-center gap-1 rounded-lg bg-[#e7f8f1] px-2.5 py-1.5 text-xs font-bold text-[#087455]"><Check size={13} />{skill}</span>)}{candidate.missingSkills.map((skill) => <span key={skill} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-700"><X size={13} />{skill}</span>)}</div></DetailSection>
 
           <DetailSection title="ATS score breakdown">
-            <div className="space-y-4">{Object.entries(candidate.scoreBreakdown || {}).map(([criterion, points]) => { const maximum = breakdownMaximums[criterion] || points || 1; return <div key={criterion}><div className="mb-1.5 flex justify-between text-sm"><span className="font-semibold text-slate-600">{breakdownLabels[criterion] || criterion}</span><strong className="text-[#173b45]">{points} / {maximum}</strong></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#21a77f]" style={{ width: `${Math.min(100, points / maximum * 100)}%` }} /></div></div>; })}</div>
+            <div className="space-y-4">{Object.entries(candidate.scoreBreakdown || {}).map(([criterion, points]) => { const maximum = candidate.scoreBreakdownMaximums?.[criterion] ?? breakdownMaximums[criterion] ?? points ?? 0; return <div key={criterion}><div className="mb-1.5 flex justify-between text-sm"><span className="font-semibold text-slate-600">{breakdownLabels[criterion] || criterion}</span><strong className="text-[#173b45]">{maximum === 0 ? 'Not requested' : `${points} / ${maximum}`}</strong></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#21a77f]" style={{ width: `${maximum === 0 ? 0 : Math.min(100, points / maximum * 100)}%` }} /></div></div>; })}</div>
           </DetailSection>
 
           <DetailSection title="Verified profile details">

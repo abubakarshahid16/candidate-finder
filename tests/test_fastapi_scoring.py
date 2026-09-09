@@ -61,6 +61,26 @@ class CandidateScoringTests(unittest.TestCase):
         self.assertEqual(result["sourceUrl"], "")
         self.assertNotIn("age", result)
 
+    def test_empty_skills_are_excluded_and_score_is_normalized(self):
+        result = score_candidate(
+            {
+                "title": "Data Scientist",
+                "industry": "Technology",
+                "skills": [],
+                "experienceYears": 5,
+                "education": "Unknown",
+                "location": "Riyadh",
+                "locationClassification": "Saudi Arabia",
+                "sourceUrl": "https://profiles.example/no-skills",
+            },
+            self.request(skills=[]),
+        )
+
+        self.assertEqual(result["atsScore"], 83)
+        self.assertEqual(result["scoreBreakdown"]["requiredSkills"], 0)
+        self.assertEqual(result["scoreBreakdownMaximums"]["requiredSkills"], 0)
+        self.assertIn("no skills filter was applied", result["explanation"])
+
     def test_search_returns_at_most_ten_unique_ranked_candidates(self):
         records = [
             {
@@ -105,7 +125,6 @@ class CandidateSearchValidationTests(unittest.TestCase):
     def test_invalid_filter_contracts_return_422(self):
         cases = [
             {**self.valid, "role": ""},
-            {**self.valid, "skills": []},
             {**self.valid, "experienceMin": 11},
             {**self.valid, "limit": 11},
             {**self.valid, "prompt": "x" * 12001},

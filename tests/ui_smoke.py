@@ -30,6 +30,14 @@ def candidate(index: int) -> dict:
             "geography": 10,
             "industry": 5,
         },
+        "scoreBreakdownMaximums": {
+            "requiredSkills": 40,
+            "roleTitle": 20,
+            "experience": 15,
+            "education": 10,
+            "geography": 10,
+            "industry": 5,
+        },
         "sourceUrl": f"https://profiles.example/candidate-{index}",
         "label": "Provider result",
     }
@@ -66,10 +74,10 @@ class CandidateFinderBrowserTests(unittest.TestCase):
         page.get_by_label("Industry").select_option("Technology")
 
         page.get_by_role("button", name="+ AWS").click()
-        self.assertIn("AWS", page.get_by_label("Required skills").input_value())
-        page.get_by_label("Required skills").fill("phython")
+        self.assertIn("AWS", page.get_by_label("Skills (optional)").input_value())
+        page.get_by_label("Skills (optional)").fill("phython")
         page.get_by_role("button", name="Suggestion: replace misspelling with Python").click()
-        self.assertEqual(page.get_by_label("Required skills").input_value(), "Python")
+        self.assertEqual(page.get_by_label("Skills (optional)").input_value(), "Python")
 
         page.get_by_label("Location").select_option("Custom")
         self.assertTrue(page.get_by_placeholder("Enter city, country, or region").is_visible())
@@ -128,6 +136,7 @@ class CandidateFinderBrowserTests(unittest.TestCase):
         page = self.browser.new_page(viewport={"width": 1280, "height": 900})
         page.goto("http://localhost:3000", wait_until="networkidle")
         page.get_by_role("button", name="Data Engineer", exact=True).click()
+        page.get_by_label("Skills (optional)").fill("")
 
         empty_payload = {"count": 0, "provider": "test", "demo": False, "candidates": []}
         page.route("http://localhost:3001/api/v1/candidate-search", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(empty_payload)))
