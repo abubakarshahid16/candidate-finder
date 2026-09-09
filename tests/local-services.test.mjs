@@ -71,7 +71,7 @@ test('candidate intelligence classifies location and preserves evidence provenan
 })
 
 test('duplicate detection produces reversible review candidates', () => {
-  const duplicates = findPotentialDuplicates([{ id: 'a', displayName: 'Noura Al-Harbi', currentRole: 'data_engineer' }, { id: 'b', displayName: 'Noura Al Harbi', currentRole: 'data_engineer' }])
+  const duplicates = findPotentialDuplicates([{ id: 'a', displayName: 'Demo Aurora', currentRole: 'data_engineer' }, { id: 'b', displayName: 'Demo Aurora', currentRole: 'data_engineer' }])
   assert.equal(duplicates.length, 1)
   assert.deepEqual(duplicates[0].candidateIds, ['a', 'b'])
   assert.equal(duplicates[0].reversible, true)

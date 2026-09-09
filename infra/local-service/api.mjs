@@ -5,6 +5,7 @@ import { hasPermission, listDevelopmentUsers, login, requireAuth } from './auth.
 import { searchSyntheticCandidates, validateFilters } from './search.mjs'
 import { providerHealth, providerRegistry, normalizePublicUrl, ingestPublicUrl, searchGithubProfiles } from './providers.mjs'
 import { redisCommand } from './redis.mjs'
+import { docsHtml, openapi } from './openapi.mjs'
 import { parseJobDescription, scanJobDescription, validateJobDescription } from './jd.mjs'
 import { extractDocumentText } from './document-extract.mjs'
 import { scoreCandidate } from './ats.mjs'
@@ -49,6 +50,33 @@ function json(response, status, body) {
   response.end(JSON.stringify(body))
 }
 
+const demoCandidates = [
+  { id: 'demo-aurora-1', name: 'Demo Candidate Aurora', title: 'Data Engineer', skills: ['Python', 'SQL', 'Spark'], experienceYears: 6, education: "Bachelor's degree", location: 'Riyadh, Saudi Arabia', locationClassification: 'Saudi Arabia', relocation: false, confidence: 'High' },
+  { id: 'demo-orbit-2', name: 'Demo Candidate Orbit', title: 'Senior Data Engineer', skills: ['Python', 'SQL', 'Airflow'], experienceYears: 8, education: "Master's degree", location: 'Jeddah, Saudi Arabia', locationClassification: 'Saudi Arabia', relocation: false, confidence: 'High' },
+  { id: 'demo-lumen-3', name: 'Demo Candidate Lumen', title: 'Analytics Engineer', skills: ['SQL', 'dbt', 'Python'], experienceYears: 4, education: "Bachelor's degree", location: 'Remote, outside Saudi Arabia', locationClassification: 'Outside Saudi Arabia', relocation: true, confidence: 'Medium' },
+]
+
+function candidateSearch(body) {
+  const errors = []
+  if (!body || typeof body.role !== 'string' || !body.role.trim()) errors.push('role_required')
+  if (!Array.isArray(body?.skills) || body.skills.some((skill) => typeof skill !== 'string' || !skill.trim())) errors.push('skills_array_required')
+  if (!Number.isInteger(body?.experienceMin) || body.experienceMin < 0) errors.push('experience_min_invalid')
+  if (!Number.isInteger(body?.experienceMax) || body.experienceMax < body.experienceMin) errors.push('experience_max_invalid')
+  if (typeof body?.location !== 'string' || !body.location.trim()) errors.push('location_required')
+  if (errors.length) return { errors }
+  const role = body.role.toLowerCase()
+  const skills = body.skills.map((skill) => skill.toLowerCase())
+  return { candidates: demoCandidates.map((candidate) => {
+    const matchedSkills = candidate.skills.filter((skill) => skills.includes(skill.toLowerCase()))
+    const missingSkills = body.skills.filter((skill) => !candidate.skills.some((item) => item.toLowerCase() === skill.toLowerCase()))
+    const roleMatch = candidate.title.toLowerCase().includes(role) || role.includes(candidate.title.toLowerCase().split(' ')[0])
+    const experienceMatch = candidate.experienceYears >= body.experienceMin && candidate.experienceYears <= body.experienceMax
+    const geographyMatch = candidate.locationClassification.toLowerCase() === body.location.toLowerCase() || candidate.relocation
+    const score = Math.min(100, Math.round((matchedSkills.length / Math.max(skills.length, 1)) * 45 + (roleMatch ? 20 : 0) + (experienceMatch ? 15 : 0) + (candidate.education ? 10 : 0) + (geographyMatch ? 10 : 0)))
+    return { ...candidate, demo: true, label: 'Synthetic demo candidate', atsScore: score, matchedSkills, missingSkills, explanation: `${matchedSkills.length} of ${skills.length} required skills matched; ${roleMatch ? 'role matches' : 'adjacent role'}; ${experienceMatch ? 'experience is in range' : 'experience is outside range'}; ${geographyMatch ? 'geography is compatible' : 'geography differs'}.` }
+  }).sort((a, b) => b.atsScore - a.atsScore) }
+}
+
 async function requestBody(request) {
   let body = ''
   for await (const chunk of request) body += chunk
@@ -62,6 +90,8 @@ const server = createServer(async (request, response) => {
     json(response, 200, { status: 'ok', service: 'api', mode: 'local-placeholder' })
     return
   }
+  if (request.url === '/openapi.json') return json(response, 200, openapi)
+  if (request.url === '/docs') { response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); response.end(docsHtml()); return }
   if (request.url === '/metrics') {
     const user = requireAuth(request)
     if (!user || !hasPermission(user, 'organization:manage')) return json(response, 403, { error: 'forbidden', required: 'organization:manage' })
@@ -79,6 +109,12 @@ const server = createServer(async (request, response) => {
     const status = await readiness()
     json(response, status.ready ? 200 : 503, { service: 'api', ...status })
     return
+  }
+
+  if (request.method === 'POST' && request.url === '/api/v1/candidate-search') {
+    const result = candidateSearch(await requestBody(request))
+    if (result.errors) return json(response, 400, { error: 'invalid_candidate_search', details: result.errors })
+    return json(response, 200, { demo: true, label: 'Synthetic demo candidates', candidates: result.candidates })
   }
 
   if (request.method === 'POST' && request.url === '/api/v1/auth/login') {
