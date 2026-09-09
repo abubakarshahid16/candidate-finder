@@ -16,7 +16,11 @@ type Candidate = {
   matchedSkills: string[];
   missingSkills: string[];
   confidence: string;
+  evidenceConfidence: string;
   explanation: string;
+  recommendation: string;
+  scoreBreakdown: Record<string, number>;
+  sourceUrl: string;
   label: string;
 };
 
@@ -28,6 +32,15 @@ const initialForm = {
   experienceMax: '',
   location: '',
 };
+
+const presets = [
+  { name: 'Data Engineer', role: 'Data Engineer', industry: 'Technology', skills: 'Python, SQL, Spark', experienceMin: '3', experienceMax: '10', location: 'Saudi Arabia' },
+  { name: 'Data Scientist', role: 'Data Scientist', industry: 'Technology', skills: 'Python, SQL, Machine Learning', experienceMin: '2', experienceMax: '8', location: 'Saudi Arabia' },
+  { name: 'Software Engineer', role: 'Software Engineer', industry: 'Technology', skills: 'JavaScript, TypeScript, React', experienceMin: '2', experienceMax: '10', location: 'Outside Saudi Arabia' },
+  { name: 'Security Engineer', role: 'Security Engineer', industry: 'Cybersecurity', skills: 'SIEM, Cloud Security, Incident Response', experienceMin: '3', experienceMax: '12', location: 'Saudi Arabia' },
+];
+
+const suggestedSkills = ['Python', 'SQL', 'Spark', 'Machine Learning', 'JavaScript', 'TypeScript', 'React', 'AWS'];
 
 export default function Home() {
   const [screen, setScreen] = useState<'search' | 'results' | 'settings'>(
@@ -42,6 +55,13 @@ export default function Home() {
   const [selected, setSelected] = useState<Candidate | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState('');
+
+  const addSkill = (skill: string) => {
+    const current = form.skills.split(',').map((item) => item.trim()).filter(Boolean);
+    if (!current.some((item) => item.toLowerCase() === skill.toLowerCase())) {
+      setForm({ ...form, skills: [...current, skill].join(', ') });
+    }
+  };
 
   const search = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
@@ -148,15 +168,46 @@ export default function Home() {
               onSubmit={search}
               className="mt-8 grid max-w-5xl gap-4 rounded-xl border border-[#dce6e2] bg-white p-6 md:grid-cols-2"
             >
+              <div className="md:col-span-2">
+                <div className="text-sm font-semibold text-slate-600">Predefined searches</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {presets.map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        setForm({ role: preset.role, industry: preset.industry, skills: preset.skills, experienceMin: preset.experienceMin, experienceMax: preset.experienceMax, location: preset.location });
+                        setCustomLocation('');
+                      }}
+                      className="rounded-full border border-[#9bbdb0] px-3 py-1.5 text-sm font-medium hover:bg-[#eef7f1]"
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
           <Field label="Job title">
                 <input
                   required
+                  list="job-title-suggestions"
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                 />
+                <datalist id="job-title-suggestions">
+                  {presets.map((preset) => <option key={preset.role} value={preset.role} />)}
+                  <option value="Product Manager" />
+                </datalist>
           </Field>
           <Field label="Industry">
-            <input required value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Technology" />
+            <input required list="industry-suggestions" value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="Technology" />
+            <datalist id="industry-suggestions">
+              <option value="Technology" />
+              <option value="Financial services" />
+              <option value="Healthcare" />
+              <option value="Energy" />
+              <option value="Telecommunications" />
+              <option value="Cybersecurity" />
+            </datalist>
           </Field>
               <Field label="Required skills">
                 <input
@@ -165,6 +216,16 @@ export default function Home() {
                   onChange={(e) => setForm({ ...form, skills: e.target.value })}
                   placeholder="Python, SQL"
                 />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {suggestedSkills.map((skill) => (
+                    <button key={skill} type="button" onClick={() => addSkill(skill)} className="rounded bg-[#eef7f1] px-2 py-1 text-xs font-medium text-[#39705b]">+ {skill}</button>
+                  ))}
+                </div>
+                {/(phython|pyhton)/i.test(form.skills) && (
+                  <button type="button" onClick={() => setForm({ ...form, skills: form.skills.replace(/phython|pyhton/gi, 'Python') })} className="mt-2 text-xs font-semibold text-amber-700 underline">
+                    Suggestion: replace misspelling with Python
+                  </button>
+                )}
               </Field>
               <Field label="Minimum experience">
                 <input
@@ -284,11 +345,11 @@ export default function Home() {
                   </div>
                 ) : <div className="grid gap-4 lg:grid-cols-3">
                   {candidates.map((candidate) => (
-                    <button
+                    <article
                       key={candidate.id}
-                      onClick={() => setSelected(candidate)}
-                      className="text-left rounded-xl border border-[#dce6e2] bg-white p-5 shadow-sm hover:border-[#5a9b7e]"
+                      className="rounded-xl border border-[#dce6e2] bg-white p-5 shadow-sm hover:border-[#5a9b7e]"
                     >
+                      <button type="button" onClick={() => setSelected(candidate)} className="block w-full text-left">
                       <div className="text-xs font-semibold text-[#c2764f]">
                         {candidate.label}
                       </div>
@@ -296,7 +357,7 @@ export default function Home() {
                         {candidate.name}
                       </h3>
                       <p className="text-sm text-slate-600">
-                        {candidate.title} · {candidate.experienceYears ?? 'Unknown'} years
+                        {candidate.title} · {candidate.experienceYears === null ? 'Experience not verified' : `${candidate.experienceYears} years`}
                       </p>
                       <div className="mt-4 text-3xl font-bold text-[#26705a]">
                         {candidate.atsScore}
@@ -308,7 +369,13 @@ export default function Home() {
                       <p className="mt-3 text-xs text-slate-600">
                         {candidate.explanation}
                       </p>
-                    </button>
+                      </button>
+                      {candidate.sourceUrl ? (
+                        <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-4 inline-block text-sm font-semibold text-[#176052] underline">
+                          {candidate.sourceUrl.includes('linkedin.com/') ? 'Open LinkedIn profile' : 'Open public source'}
+                        </a>
+                      ) : <p className="mt-4 text-xs text-amber-700">No public profile link was verified.</p>}
+                    </article>
                   ))}
                 </div>}
               </section>
@@ -344,12 +411,35 @@ export default function Home() {
                 />
                 <Detail
                   label="Evidence confidence"
-                  value={selected.confidence}
+                  value={selected.evidenceConfidence || selected.confidence}
                 />
+                <Detail
+                  label="Experience"
+                  value={selected.experienceYears === null ? 'Not verified from public evidence' : `${selected.experienceYears} years`}
+                />
+                <Detail label="Education" value={selected.education} />
                 <Detail
                   label="Location classification"
                   value={`${selected.locationClassification} · ${selected.location}`}
                 />
+                <Detail label="Recruiter suggestion" value={selected.recommendation} />
+                <div className="mt-6 border-t border-slate-100 pt-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">ATS score breakdown</div>
+                  <div className="mt-2 space-y-1 text-sm text-slate-700">
+                    {Object.entries(selected.scoreBreakdown || {}).map(([criterion, points]) => (
+                      <div key={criterion} className="flex justify-between">
+                        <span>{criterion.replace(/([A-Z])/g, ' $1')}</span>
+                        <strong>{points}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Detail label="Age" value="Not collected or used in hiring scores" />
+                {selected.sourceUrl && (
+                  <a href={selected.sourceUrl} target="_blank" rel="noreferrer" className="mt-6 inline-block rounded-lg bg-[#164d48] px-4 py-2 text-sm font-semibold text-white">
+                    {selected.sourceUrl.includes('linkedin.com/') ? 'Open LinkedIn profile' : 'Open public source'}
+                  </a>
+                )}
               </div>
             )}
           </>
