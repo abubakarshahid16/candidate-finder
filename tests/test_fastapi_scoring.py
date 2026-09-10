@@ -1,9 +1,10 @@
+import os
 import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from infra.fastapi.main import CandidateSearchRequest, app, candidate_search, score_candidate
+from infra.fastapi.main import CandidateSearchRequest, _search_requests, app, candidate_search, score_candidate
 
 
 class CandidateScoringTests(unittest.TestCase):
@@ -37,11 +38,12 @@ class CandidateScoringTests(unittest.TestCase):
             self.request(),
         )
 
-        self.assertEqual(result["atsScore"], 90)
-        self.assertEqual(result["scoreBreakdown"]["requiredSkills"], 40)
+        self.assertEqual(result["atsScore"], 100)
+        self.assertEqual(result["scoreBreakdown"]["requiredSkills"], 20)
         self.assertEqual(result["scoreBreakdown"]["education"], 0)
-        self.assertEqual(result["scoreBreakdown"]["geography"], 10)
+        self.assertEqual(result["scoreBreakdown"]["geography"], 20)
         self.assertEqual(result["confidence"], "High")
+        self.assertEqual(result["evidenceCoverage"], 100)
 
     def test_unknown_evidence_does_not_receive_points(self):
         result = score_candidate(
@@ -53,13 +55,33 @@ class CandidateScoringTests(unittest.TestCase):
                 "location": "Unknown",
                 "locationClassification": "Unknown",
                 "sourceUrl": "javascript:bad()",
+                "age": 42,
             },
             self.request(),
         )
 
         self.assertEqual(result["atsScore"], 0)
+        self.assertEqual(result["evidenceCoverage"], 0)
         self.assertEqual(result["sourceUrl"], "")
         self.assertNotIn("age", result)
+
+    def test_duplicate_and_blank_requested_skills_do_not_change_weights(self):
+        result = score_candidate(
+            {
+                "title": "Data Scientist",
+                "industry": "Technology",
+                "skills": ["Python"],
+                "experienceYears": 5,
+                "location": "Riyadh",
+                "locationClassification": "Saudi Arabia",
+                "sourceUrl": "https://profiles.example/normalized-skills",
+            },
+            self.request(skills=["Python", " phython "]),
+        )
+
+        self.assertEqual(result["matchedSkills"], ["Python"])
+        self.assertEqual(result["missingSkills"], [])
+        self.assertEqual(result["atsScore"], 100)
 
     def test_empty_skills_are_excluded_and_score_is_normalized(self):
         result = score_candidate(
@@ -76,10 +98,72 @@ class CandidateScoringTests(unittest.TestCase):
             self.request(skills=[]),
         )
 
-        self.assertEqual(result["atsScore"], 83)
+        self.assertEqual(result["atsScore"], 100)
         self.assertEqual(result["scoreBreakdown"]["requiredSkills"], 0)
         self.assertEqual(result["scoreBreakdownMaximums"]["requiredSkills"], 0)
         self.assertIn("no skills filter was applied", result["explanation"])
+
+    def test_education_is_scored_only_when_the_recruiter_states_a_requirement(self):
+        candidate = {
+            "title": "Data Scientist",
+            "industry": "Technology",
+            "skills": ["Python"],
+            "experienceYears": 5,
+            "education": "Bachelor of Science in Computer Science",
+            "location": "Riyadh",
+            "locationClassification": "Saudi Arabia",
+            "sourceUrl": "https://profiles.example/education",
+        }
+
+        not_requested = score_candidate(candidate, self.request())
+        requested = score_candidate(candidate, self.request(educationRequirement="Bachelor Computer Science"))
+
+        self.assertEqual(not_requested["scoreBreakdownMaximums"]["education"], 0)
+        self.assertGreater(requested["scoreBreakdownMaximums"]["education"], 0)
+        self.assertGreater(requested["scoreBreakdown"]["education"], 0)
+
+    def test_experience_above_preferred_maximum_is_not_penalized(self):
+        result = score_candidate(
+            {
+                "title": "Data Scientist",
+                "industry": "Technology",
+                "skills": ["Python"],
+                "experienceYears": 18,
+                "education": "Unknown",
+                "location": "Riyadh",
+                "locationClassification": "Saudi Arabia",
+                "sourceUrl": "https://profiles.example/senior",
+            },
+            self.request(experienceMax=10),
+        )
+
+        self.assertEqual(result["scoreBreakdown"]["experience"], result["scoreBreakdownMaximums"]["experience"])
+        self.assertIn("no score penalty", result["explanation"])
+
+    def test_scoring_is_deterministic_and_strips_protected_traits(self):
+        candidate = {
+            "name": "Public profile",
+            "title": "Data Analyst",
+            "industry": "Technology",
+            "skills": ["Python"],
+            "experienceYears": 1,
+            "education": "Unknown",
+            "location": "Riyadh",
+            "locationClassification": "Saudi Arabia",
+            "sourceUrl": "https://profiles.example/deterministic",
+            "age": 37,
+            "gender": "not-used",
+            "nationality": "not-used",
+        }
+
+        first = score_candidate(candidate, self.request())
+        second = score_candidate(candidate, self.request())
+
+        self.assertEqual(first, second)
+        self.assertNotIn("age", first)
+        self.assertNotIn("gender", first)
+        self.assertNotIn("nationality", first)
+        self.assertAlmostEqual(sum(first["scoreBreakdownMaximums"].values()), 100)
 
     def test_search_returns_at_most_ten_unique_ranked_candidates(self):
         records = [
@@ -111,6 +195,7 @@ class CandidateScoringTests(unittest.TestCase):
 
 class CandidateSearchValidationTests(unittest.TestCase):
     def setUp(self):
+        _search_requests.clear()
         self.client = TestClient(app)
         self.valid = {
             "role": "Data Engineer",
@@ -152,6 +237,42 @@ class CandidateSearchValidationTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["access-control-allow-origin"], "http://localhost:3000")
+
+    def test_rejects_unsafe_or_excessive_profile_urls(self):
+        unsafe = self.client.post("/api/v1/candidate-search", json={**self.valid, "publicProfileUrls": ["javascript:alert(1)"]})
+        excessive = self.client.post("/api/v1/candidate-search", json={**self.valid, "publicProfileUrls": [f"https://profiles.example/{index}" for index in range(11)]})
+
+        self.assertEqual(unsafe.status_code, 422)
+        self.assertEqual(excessive.status_code, 422)
+
+    def test_rejects_blank_or_oversized_skills(self):
+        blank = self.client.post("/api/v1/candidate-search", json={**self.valid, "skills": [""]})
+        oversized = self.client.post("/api/v1/candidate-search", json={**self.valid, "skills": ["x" * 81]})
+
+        self.assertEqual(blank.status_code, 422)
+        self.assertEqual(oversized.status_code, 422)
+
+    def test_optional_api_key_protects_paid_search(self):
+        with patch.dict(os.environ, {"API_ACCESS_TOKEN": "local-secret"}):
+            denied = self.client.post("/api/v1/candidate-search", json=self.valid)
+            with patch("infra.fastapi.main.claude_candidates", return_value=[]):
+                allowed = self.client.post("/api/v1/candidate-search", json=self.valid, headers={"X-API-Key": "local-secret"})
+
+        self.assertEqual(denied.status_code, 401)
+        self.assertEqual(allowed.status_code, 200)
+
+    def test_search_rate_limit_is_enforced(self):
+        with patch.dict(os.environ, {"SEARCH_RATE_LIMIT_PER_MINUTE": "2"}):
+            # The configured module-level default is intentionally patched for this isolated test.
+            with patch("infra.fastapi.main.RATE_LIMIT_REQUESTS", 2), patch("infra.fastapi.main.claude_candidates", return_value=[]):
+                first = self.client.post("/api/v1/candidate-search", json=self.valid)
+                second = self.client.post("/api/v1/candidate-search", json=self.valid)
+                limited = self.client.post("/api/v1/candidate-search", json=self.valid)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(limited.status_code, 429)
+        self.assertIn("Retry-After", limited.headers)
 
 
 if __name__ == "__main__":

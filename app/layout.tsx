@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Candidate Finder — Recruiting Intelligence',
-  description: 'Evidence-first candidate discovery with transparent ATS scoring.',
+  description: 'Evidence-first candidate discovery with transparent, job-related match scoring.',
 };
 
 export default function RootLayout({

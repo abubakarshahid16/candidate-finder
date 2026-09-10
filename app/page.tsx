@@ -25,6 +25,11 @@ import {
   X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
+const API_ACCESS_TOKEN = process.env.NEXT_PUBLIC_API_ACCESS_TOKEN || '';
+const MAX_JOB_DESCRIPTION_BYTES = 1024 * 1024;
 
 type Screen = 'search' | 'results' | 'settings';
 type SearchState = 'idle' | 'loading' | 'error';
@@ -43,6 +48,8 @@ type Candidate = {
   missingSkills: string[];
   confidence: string;
   evidenceConfidence: string;
+  evidenceCoverage: number;
+  rubricVersion: string;
   explanation: string;
   recommendation: string;
   scoreBreakdown: Record<string, number>;
@@ -57,34 +64,26 @@ const initialForm = {
   skills: '',
   experienceMin: '',
   experienceMax: '',
+  educationRequirement: '',
   location: '',
 };
 
 const presets = [
-  { name: 'Data Engineer', role: 'Data Engineer', industry: 'Technology', skills: 'Python, SQL, Spark', experienceMin: '3', experienceMax: '10', location: 'Saudi Arabia' },
-  { name: 'Data Scientist', role: 'Data Scientist', industry: 'Technology', skills: 'Python, SQL, Machine Learning', experienceMin: '2', experienceMax: '8', location: 'Saudi Arabia' },
-  { name: 'Software Engineer', role: 'Software Engineer', industry: 'Technology', skills: 'JavaScript, TypeScript, React', experienceMin: '2', experienceMax: '10', location: 'Outside Saudi Arabia' },
-  { name: 'Security Engineer', role: 'Security Engineer', industry: 'Cybersecurity', skills: 'SIEM, Cloud Security, Incident Response', experienceMin: '3', experienceMax: '12', location: 'Saudi Arabia' },
+  { name: 'Data Engineer', role: 'Data Engineer', industry: 'Technology', skills: 'Python, SQL, Spark', experienceMin: '3', experienceMax: '10', educationRequirement: '', location: 'Saudi Arabia' },
+  { name: 'Data Scientist', role: 'Data Scientist', industry: 'Technology', skills: 'Python, SQL, Machine Learning', experienceMin: '2', experienceMax: '8', educationRequirement: '', location: 'Saudi Arabia' },
+  { name: 'Software Engineer', role: 'Software Engineer', industry: 'Technology', skills: 'JavaScript, TypeScript, React', experienceMin: '2', experienceMax: '10', educationRequirement: '', location: 'Outside Saudi Arabia' },
+  { name: 'Security Engineer', role: 'Security Engineer', industry: 'Cybersecurity', skills: 'SIEM, Cloud Security, Incident Response', experienceMin: '3', experienceMax: '12', educationRequirement: '', location: 'Saudi Arabia' },
 ];
 
 const suggestedSkills = ['Python', 'SQL', 'Spark', 'Machine Learning', 'JavaScript', 'TypeScript', 'React', 'AWS'];
 const breakdownLabels: Record<string, string> = {
   requiredSkills: 'Required skills',
   roleTitle: 'Role and title',
-  experience: 'Experience range',
-  education: 'Education',
+  experience: 'Relevant experience',
+  education: 'Required education',
   geography: 'Location / relocation',
   industry: 'Industry',
 };
-const breakdownMaximums: Record<string, number> = {
-  requiredSkills: 40,
-  roleTitle: 20,
-  experience: 15,
-  education: 10,
-  geography: 10,
-  industry: 5,
-};
-
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('search');
   const [form, setForm] = useState(initialForm);
@@ -140,9 +139,12 @@ export default function Home() {
     setCandidates([]);
     setSelected(null);
     try {
-      const response = await fetch('http://localhost:3001/api/v1/candidate-search', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/candidate-search`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_ACCESS_TOKEN ? { 'X-API-Key': API_ACCESS_TOKEN } : {}),
+        },
         body: JSON.stringify({
           prompt,
           role: form.role,
@@ -150,6 +152,7 @@ export default function Home() {
           skills: form.skills.split(',').map((skill) => skill.trim()).filter(Boolean),
           experienceMin: minimum,
           experienceMax: maximum,
+          educationRequirement: form.educationRequirement,
           location: form.location === 'Custom' ? customLocation : form.location,
           limit: 10,
           publicProfileUrls: profileUrl.trim() ? [profileUrl.trim()] : [],
@@ -171,7 +174,7 @@ export default function Home() {
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Search failed';
       setError(message === 'Failed to fetch'
-        ? 'Cannot reach the candidate-search API. Make sure the API is running on http://localhost:3001, then try again.'
+        ? `Cannot reach the candidate-search API at ${API_BASE_URL}. Check the README setup steps, then try again.`
         : message);
       setState('error');
     }
@@ -200,6 +203,8 @@ export default function Home() {
               setCustomLocation={setCustomLocation}
               state={state}
               error={error}
+              setState={setState}
+              setError={setError}
               addSkill={addSkill}
               resetSearch={resetSearch}
               search={search}
@@ -261,8 +266,8 @@ function Sidebar({ screen, candidates, onNavigate }: { screen: Screen; candidate
         })}
       </nav>
       <div className="absolute inset-x-5 bottom-6 hidden rounded-2xl border border-white/10 bg-white/[.06] p-4 md:block">
-        <div className="flex items-center gap-2 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-[#35d0a0]" /> Local service online</div>
-        <p className="mt-2 text-xs leading-5 text-slate-400">Public evidence only. Authentication is disabled for local development.</p>
+        <div className="flex items-center gap-2 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-[#35d0a0]" /> Local search workspace</div>
+        <p className="mt-2 text-xs leading-5 text-slate-400">Public evidence only. API access can be protected with a local token.</p>
       </div>
     </aside>
   );
@@ -294,13 +299,15 @@ type SearchWorkspaceProps = {
   setCustomLocation: (value: string) => void;
   state: SearchState;
   error: string;
+  setState: (state: SearchState) => void;
+  setError: (error: string) => void;
   addSkill: (skill: string) => void;
   resetSearch: () => void;
   search: (event: { preventDefault: () => void }) => Promise<void>;
 };
 
 function SearchWorkspace(props: SearchWorkspaceProps) {
-  const { form, setForm, profileUrl, setProfileUrl, prompt, setPrompt, jdFileName, setJdFileName, customIndustry, setCustomIndustry, customLocation, setCustomLocation, state, error, addSkill, resetSearch, search } = props;
+  const { form, setForm, profileUrl, setProfileUrl, prompt, setPrompt, jdFileName, setJdFileName, customIndustry, setCustomIndustry, customLocation, setCustomLocation, state, error, setState, setError, addSkill, resetSearch, search } = props;
   return (
     <>
       <section className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
@@ -330,7 +337,7 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
               <button
                 key={preset.name}
                 type="button"
-                onClick={() => { setForm({ role: preset.role, industry: preset.industry, skills: preset.skills, experienceMin: preset.experienceMin, experienceMax: preset.experienceMax, location: preset.location }); setCustomIndustry(''); setCustomLocation(''); }}
+                onClick={() => { setForm({ role: preset.role, industry: preset.industry, skills: preset.skills, experienceMin: preset.experienceMin, experienceMax: preset.experienceMax, educationRequirement: preset.educationRequirement, location: preset.location }); setCustomIndustry(''); setCustomLocation(''); }}
                 className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${form.role === preset.role ? 'border-[#159773] bg-[#e7f8f1] text-[#087455]' : 'border-[#dce6e9] bg-white text-slate-600 hover:border-[#9ccabd]'}`}
               >
                 {preset.name}
@@ -365,9 +372,14 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
                 <Field label="Minimum experience" icon={Clock3}>
                   <input required type="number" min="0" max="60" value={form.experienceMin} onChange={(event) => setForm({ ...form, experienceMin: event.target.value })} placeholder="3" />
                 </Field>
-                <Field label="Maximum experience" icon={Clock3}>
+                <Field label="Preferred maximum experience" icon={Clock3}>
                   <input required type="number" min="0" max="60" value={form.experienceMax} onChange={(event) => setForm({ ...form, experienceMax: event.target.value })} placeholder="10" />
                 </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Education requirement (optional)" icon={GraduationCap} hint="Only add education when the job analysis shows it is needed on entry. Otherwise it is excluded from scoring.">
+                    <input value={form.educationRequirement} onChange={(event) => setForm({ ...form, educationRequirement: event.target.value })} placeholder="e.g. Bachelor's degree in computer science" />
+                  </Field>
+                </div>
                 <div className="sm:col-span-2">
                   <Field label="Location" icon={MapPin}>
                     <select required value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })}>
@@ -380,7 +392,7 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
               </div>
             </FormSection>
 
-            <FormSection number="02" title="Skills" description="Optional. Add comma-separated skills to make them 40% of the ATS rubric; leave blank to score the remaining criteria only.">
+            <FormSection number="02" title="Skills" description="Optional. Add only skills required on entry. All active criteria receive equal weight unless a validated job analysis supports different weights.">
               <Field label="Skills (optional)" icon={Check}>
                 <input value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Python, SQL, Spark" />
               </Field>
@@ -399,7 +411,7 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
                   <UploadCloud className="text-[#168060]" size={24} />
                   <span className="mt-2 text-sm font-bold text-[#173b45]">Job description upload</span>
                   <span className="mt-1 text-xs text-slate-500">Text or Markdown · loads into the prompt</span>
-                  <input type="file" accept=".txt,.md,.text" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; setJdFileName(file.name); const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setPrompt(reader.result); }; reader.readAsText(file); }} />
+                  <input type="file" accept=".txt,.md,.text,text/plain,text/markdown" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > MAX_JOB_DESCRIPTION_BYTES) { setError('Job description files must be 1 MB or smaller.'); setState('error'); event.target.value = ''; return; } setError(''); setState('idle'); setJdFileName(file.name); const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setPrompt(reader.result); }; reader.onerror = () => { setError('The job description file could not be read.'); setState('error'); setJdFileName(''); }; reader.readAsText(file); }} />
                   {jdFileName && <span className="mt-2 rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[#087455] shadow-sm">Loaded: {jdFileName}</span>}
                 </label>
                 <Field label="Optional authorized profile/provider URL" icon={ExternalLink} hint="Use a public profile URL you are permitted to access.">
@@ -418,11 +430,13 @@ function SearchWorkspace(props: SearchWorkspaceProps) {
               <SummaryLine label="Industry" value={form.industry === 'Custom' ? customIndustry || 'Custom' : form.industry || 'Not set'} />
               <SummaryLine label="Skills" value={form.skills ? `${form.skills.split(',').filter(Boolean).length} selected` : 'Any skills'} />
               <SummaryLine label="Experience" value={form.experienceMin && form.experienceMax ? `${form.experienceMin}–${form.experienceMax} years` : 'Not set'} />
+              <SummaryLine label="Education" value={form.educationRequirement || 'Not scored'} />
               <SummaryLine label="Location" value={form.location === 'Custom' ? customLocation || 'Custom' : form.location || 'Not set'} />
             </div>
             <ul className="mt-5 space-y-3 text-sm text-slate-300">
               <li className="flex gap-2"><Check className="mt-0.5 shrink-0 text-[#35d0a0]" size={16} /> Up to 10 ranked profiles</li>
               <li className="flex gap-2"><Check className="mt-0.5 shrink-0 text-[#35d0a0]" size={16} /> Duplicate sources removed</li>
+              <li className="flex gap-2"><Check className="mt-0.5 shrink-0 text-[#35d0a0]" size={16} /> Equal-weight, job-related rubric</li>
               <li className="flex gap-2"><Check className="mt-0.5 shrink-0 text-[#35d0a0]" size={16} /> No age or protected traits</li>
             </ul>
             <button disabled={state === 'loading'} className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-[#35d0a0] px-5 py-3.5 text-base font-extrabold text-[#092b25] shadow-[0_12px_30px_rgba(53,208,160,.2)] transition hover:bg-[#52ddb3] disabled:cursor-wait disabled:opacity-70">
@@ -445,7 +459,7 @@ function ResultsWorkspace({ candidates, metrics, onNewSearch, onSelect }: { cand
         <div>
           <div className="mb-3 flex items-center gap-2 text-sm font-bold text-[#087455]"><span>Ranked shortlist</span>{candidates.length > 0 && <span className="rounded-full bg-[#e4f7ef] px-2.5 py-1 text-xs">Top {candidates.length} verified</span>}</div>
           <h1 className="text-3xl font-bold tracking-[-.035em] text-[#0d2633] sm:text-4xl">Top candidates</h1>
-          <p className="mt-2 text-base text-slate-600">Compare match strength with the public evidence behind every score.</p>
+          <p className="mt-2 text-base text-slate-600">Compare job-criteria alignment with the public evidence behind every score. This is a review aid, not a universal ATS or pass/fail decision.</p>
         </div>
         <button type="button" onClick={onNewSearch} className="flex items-center gap-2 self-start rounded-xl bg-[#102c3a] px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-[#173e50]"><Search size={17} /> New search</button>
       </section>
@@ -484,7 +498,7 @@ function CandidateCard({ candidate, rank, onSelect }: { candidate: Candidate; ra
       <button type="button" onClick={() => onSelect(candidate)} className="block w-full p-5 text-left sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[.12em] text-slate-400"><span>Rank #{rank}</span><span className="h-1 w-1 rounded-full bg-slate-300" /><span>{candidate.evidenceConfidence || candidate.confidence} evidence</span></div>
+            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[.12em] text-slate-400"><span>Rank #{rank}</span><span className="h-1 w-1 rounded-full bg-slate-300" /><span>{candidate.evidenceConfidence || candidate.confidence} evidence · {candidate.evidenceCoverage}% covered</span></div>
             <h2 className="mt-3 truncate text-xl font-bold text-[#102c3a]">{candidate.name}</h2>
             <p className="mt-1 text-sm font-semibold text-slate-600">{candidate.title}</p>
           </div>
@@ -507,16 +521,15 @@ function CandidateCard({ candidate, rank, onSelect }: { candidate: Candidate; ra
 
 function CandidateSheet({ candidate, onClose }: { candidate: Candidate; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-[#06151d]/45 backdrop-blur-[2px]">
-      <button type="button" aria-label="Dismiss candidate details" onClick={onClose} className="absolute inset-0 h-full w-full cursor-default" />
-      <dialog open aria-label={`${candidate.name} details`} className="absolute inset-y-0 right-0 left-auto m-0 h-full max-h-none w-full max-w-[540px] overflow-y-auto border-0 bg-white p-0 text-[#12232f] shadow-2xl">
+    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent side="right" showCloseButton={false} className="block w-full max-w-[540px] overflow-y-auto border-0 bg-white p-0 text-[#12232f] shadow-2xl sm:max-w-[540px]">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
           <div className="text-sm font-bold text-slate-500">Candidate evidence</div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" aria-label="Close"><X size={18} /></button>
         </div>
         <div className="p-6 sm:p-8">
           <div className="flex items-start justify-between gap-5">
-            <div><div className="text-xs font-extrabold uppercase tracking-[.14em] text-[#087455]">{candidate.label}</div><h2 className="mt-2 text-3xl font-bold tracking-tight text-[#0d2633]">{candidate.name}</h2><p className="mt-1 font-semibold text-slate-600">{candidate.title}</p></div>
+            <div><div className="text-xs font-extrabold uppercase tracking-[.14em] text-[#087455]">{candidate.label}</div><SheetTitle className="mt-2 text-3xl font-bold tracking-tight text-[#0d2633]">{candidate.name}</SheetTitle><SheetDescription className="mt-1 font-semibold text-slate-600">{candidate.title}</SheetDescription></div>
             <div className="rounded-2xl bg-[#e3f7ef] px-4 py-3 text-center text-[#087455]"><div className="text-3xl font-black">{candidate.atsScore}</div><div className="text-[10px] font-extrabold uppercase">ATS / 100</div></div>
           </div>
 
@@ -525,7 +538,7 @@ function CandidateSheet({ candidate, onClose }: { candidate: Candidate; onClose:
           <DetailSection title="Match summary"><p className="text-sm leading-7 text-slate-600">{candidate.explanation}</p><div className="mt-4 flex flex-wrap gap-2">{candidate.matchedSkills.map((skill) => <span key={skill} className="inline-flex items-center gap-1 rounded-lg bg-[#e7f8f1] px-2.5 py-1.5 text-xs font-bold text-[#087455]"><Check size={13} />{skill}</span>)}{candidate.missingSkills.map((skill) => <span key={skill} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-700"><X size={13} />{skill}</span>)}</div></DetailSection>
 
           <DetailSection title="ATS score breakdown">
-            <div className="space-y-4">{Object.entries(candidate.scoreBreakdown || {}).map(([criterion, points]) => { const maximum = candidate.scoreBreakdownMaximums?.[criterion] ?? breakdownMaximums[criterion] ?? points ?? 0; return <div key={criterion}><div className="mb-1.5 flex justify-between text-sm"><span className="font-semibold text-slate-600">{breakdownLabels[criterion] || criterion}</span><strong className="text-[#173b45]">{maximum === 0 ? 'Not requested' : `${points} / ${maximum}`}</strong></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#21a77f]" style={{ width: `${maximum === 0 ? 0 : Math.min(100, points / maximum * 100)}%` }} /></div></div>; })}</div>
+            <div className="space-y-4">{Object.entries(candidate.scoreBreakdown || {}).map(([criterion, points]) => { const maximum = candidate.scoreBreakdownMaximums?.[criterion] ?? points ?? 0; return <div key={criterion}><div className="mb-1.5 flex justify-between text-sm"><span className="font-semibold text-slate-600">{breakdownLabels[criterion] || criterion}</span><strong className="text-[#173b45]">{maximum === 0 ? 'Not requested' : `${points} / ${maximum}`}</strong></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#21a77f]" style={{ width: `${maximum === 0 ? 0 : Math.min(100, points / maximum * 100)}%` }} /></div></div>; })}</div>
           </DetailSection>
 
           <DetailSection title="Verified profile details">
@@ -534,14 +547,15 @@ function CandidateSheet({ candidate, onClose }: { candidate: Candidate; onClose:
               <DetailFact icon={GraduationCap} label="Education" value={candidate.education} />
               <DetailFact icon={MapPin} label="Location" value={`${candidate.locationClassification} · ${candidate.location}`} />
               <DetailFact icon={ShieldCheck} label="Evidence confidence" value={candidate.evidenceConfidence || candidate.confidence} />
+              <DetailFact icon={Target} label="Evidence coverage" value={`${candidate.evidenceCoverage}% of scored criteria`} />
             </div>
           </DetailSection>
 
           <div className="mt-7 rounded-xl border border-[#dce8e4] bg-[#f7fbf9] p-4 text-sm text-slate-600"><strong className="text-[#173b45]">Age:</strong> Not collected or used in hiring scores.</div>
           {candidate.sourceUrl && <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#102c3a] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#173e50]"><ExternalLink size={17} />{candidate.sourceUrl.includes('linkedin.com/') ? 'Open LinkedIn profile' : 'Open public source'}</a>}
         </div>
-      </dialog>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -553,11 +567,11 @@ function SettingsWorkspace() {
       <p className="mt-2 text-base text-slate-600">Review the services and safeguards used by this local workspace.</p>
       <div className="mt-8 grid gap-5 sm:grid-cols-2">
         <SettingsCard icon={Sparkles} title="Candidate provider" status="Claude web search" description="Discovers job-relevant evidence from publicly available sources." />
-        <SettingsCard icon={CircleGauge} title="ATS scoring" status="Deterministic rubric" description="Scores role, skills, experience, education, geography, and industry." />
+        <SettingsCard icon={CircleGauge} title="Match scoring" status="Deterministic rubric v2" description="Equal-weights active job criteria, excludes unspecified education and never penalizes experience above the preferred range. Validate outcomes before production hiring use." />
         <SettingsCard icon={ShieldCheck} title="Local access" status="Authentication disabled" description="Local development opens directly. Production security remains isolated." />
         <SettingsCard icon={Users} title="Candidate records" status="Stateless" description="Search results are not stored in a candidate database." />
       </div>
-      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5"><div className="flex gap-3"><AlertCircle className="mt-0.5 shrink-0 text-amber-700" size={20} /><div><h2 className="font-bold text-amber-900">Human review required</h2><p className="mt-1 text-sm leading-6 text-amber-800">ATS scores support recruiter review; they should not make automatic employment decisions. Age and protected characteristics are never collected or ranked.</p></div></div></div>
+      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5"><div className="flex gap-3"><AlertCircle className="mt-0.5 shrink-0 text-amber-700" size={20} /><div><h2 className="font-bold text-amber-900">Human review required</h2><p className="mt-1 text-sm leading-6 text-amber-800">The score measures documented alignment to this search, not employability. It is not a validated pass/fail cutoff. Recruiters must verify evidence and monitor outcomes for adverse impact. Age and protected characteristics are never collected or ranked.</p></div></div></div>
     </section>
   );
 }

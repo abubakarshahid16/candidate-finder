@@ -25,9 +25,9 @@ Open `http://localhost:3000`. Local development opens directly without login or 
 }
 ```
 
-When Claude web search is configured, the response contains up to 10 unique verified candidates sorted by ATS score. Each candidate includes matched and missing skills, a six-part score breakdown, explanation, evidence confidence, location classification, and public-source provenance. Scores use only role, skills, experience, education, geography/relocation, and industry. Fewer than 10 records means the provider could not verify 10 suitable public profiles; the service never pads results with fabricated candidates. Without `ANTHROPIC_API_KEY`, the API returns `claude_api_key_not_configured`.
+When Claude web search is configured, the response contains up to 10 unique verified candidates sorted by job-criteria match score. Each candidate includes matched and missing skills, a score breakdown, explanation, evidence coverage and confidence, location classification, rubric version, and public-source provenance. Rubric v2 gives equal weight to each active, job-related criterion: role, requested skills, minimum experience, explicitly requested education, geography/relocation, and industry. Experience above the preferred maximum is not penalized. Fewer than 10 records means the provider could not verify 10 suitable public profiles; the service never pads results with fabricated candidates. Without `ANTHROPIC_API_KEY`, the API returns `claude_api_key_not_configured`.
 
-`skills` is optional and may be an empty array. When omitted, the skills category is excluded and the ATS score is normalized across role, experience, education, geography/relocation, and industry; candidates are not penalized for a filter the recruiter did not provide.
+`skills`, `industry`, and `educationRequirement` are optional. An omitted criterion is excluded and the score is normalized across the remaining active criteria, so candidates are not penalized for a filter the recruiter did not provide. Education is never scored unless `educationRequirement` is explicitly supplied.
 
 Health checks are `GET /health` and `GET /ready`.
 

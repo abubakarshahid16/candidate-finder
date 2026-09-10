@@ -20,23 +20,25 @@ def candidate(index: int) -> dict:
         "missingSkills": [],
         "confidence": "High",
         "evidenceConfidence": "High",
+        "evidenceCoverage": 100,
+        "rubricVersion": "job-related-equal-weight-v2",
         "explanation": "All requested criteria matched.",
         "recommendation": "Strong evidence-based match.",
         "scoreBreakdown": {
-            "requiredSkills": 40,
+            "requiredSkills": 20,
             "roleTitle": 20,
-            "experience": 15,
-            "education": 10,
-            "geography": 10,
-            "industry": 5,
+            "experience": 20,
+            "education": 0,
+            "geography": 20,
+            "industry": 20,
         },
         "scoreBreakdownMaximums": {
-            "requiredSkills": 40,
+            "requiredSkills": 20,
             "roleTitle": 20,
-            "experience": 15,
-            "education": 10,
-            "geography": 10,
-            "industry": 5,
+            "experience": 20,
+            "education": 0,
+            "geography": 20,
+            "industry": 20,
         },
         "sourceUrl": f"https://profiles.example/candidate-{index}",
         "label": "Provider result",
@@ -86,6 +88,8 @@ class CandidateFinderBrowserTests(unittest.TestCase):
         page.get_by_label("Job description upload").set_input_files(
             {"name": "job.md", "mimeType": "text/markdown", "buffer": b"Senior data engineer with Python and SQL."}
         )
+        page.get_by_label("Optional search prompt").wait_for()
+        page.wait_for_function("() => document.querySelector('textarea')?.value.includes('Senior data engineer')")
         self.assertEqual(page.get_by_label("Optional search prompt").input_value(), "Senior data engineer with Python and SQL.")
         self.assertTrue(page.get_by_text("Loaded: job.md").is_visible())
         page.get_by_label("Optional authorized profile/provider URL").fill("https://profiles.example/authorized")
@@ -105,6 +109,7 @@ class CandidateFinderBrowserTests(unittest.TestCase):
         self.assertEqual(captured["skills"], ["Python"])
         self.assertEqual(captured["experienceMin"], 3)
         self.assertEqual(captured["experienceMax"], 10)
+        self.assertEqual(captured["educationRequirement"], "")
         self.assertEqual(captured["location"], "Saudi Arabia")
         self.assertEqual(captured["limit"], 10)
         self.assertEqual(captured["prompt"], "Senior data engineer with Python and SQL.")
@@ -114,9 +119,11 @@ class CandidateFinderBrowserTests(unittest.TestCase):
 
         page.get_by_text("Candidate 1", exact=True).click()
         self.assertTrue(page.get_by_text("ATS score breakdown").is_visible())
+        self.assertTrue(page.get_by_text("100% of scored criteria").is_visible())
         self.assertTrue(page.get_by_text("Not collected or used in hiring scores").is_visible())
         self.assertGreaterEqual(page.get_by_role("link", name="Open public source").count(), 1)
-        page.get_by_role("button", name="Close").click()
+        page.keyboard.press("Escape")
+        self.assertFalse(page.get_by_text("ATS score breakdown").is_visible())
 
         page.get_by_role("button", name="Settings").click()
         self.assertTrue(page.get_by_role("heading", name="Settings").is_visible())
@@ -141,7 +148,7 @@ class CandidateFinderBrowserTests(unittest.TestCase):
         empty_payload = {"count": 0, "provider": "test", "demo": False, "candidates": []}
         page.route("http://localhost:3001/api/v1/candidate-search", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(empty_payload)))
         page.get_by_role("button", name="Find candidates").click()
-        self.assertTrue(page.get_by_role("heading", name="No results yet").is_visible())
+        page.get_by_role("heading", name="No results yet").wait_for()
 
         page.unroute("http://localhost:3001/api/v1/candidate-search")
         page.get_by_role("button", name="Go to candidate search").click()

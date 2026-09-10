@@ -10,7 +10,10 @@ services:
       - "${API_PORT:-3001}:3001"
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      API_ACCESS_TOKEN: ${API_ACCESS_TOKEN:-}
+      SEARCH_RATE_LIMIT_PER_MINUTE: ${SEARCH_RATE_LIMIT_PER_MINUTE:-10}
     volumes:
       - ./:/workspace:ro
     healthcheck:
